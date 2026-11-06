@@ -1,13 +1,33 @@
 {
   "auto_tune_enabled": true,
   "target_base_humidex": 26.0,
-  "user_offset": 0.0,
+  "user_offset": 2.2,
   "min_temp": 22,
   "max_temp": 27,
   "cooldown_minutes": 10,
-  "last_tune_time": 1793955337.1616492,
-  "last_tune_action": "Cooled to 23°C (High)",
+  "last_tune_time": 1793972486.1342323,
+  "last_tune_action": "Feedback: บันทึกความสบายเป้าหมายที่ 28.2°C (ชดเชย 2.2°C)",
   "history": [
+    {
+      "time": "20:50:34",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "20:41:26",
+      "action": "Feedback: บันทึกความสบายเป้าหมายที่ 28.2°C (ชดเชย 2.2°C)",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": 25.0,
+      "room_humidity": 50.0,
+      "result": "Comfort Target Calibrated"
+    },
     {
       "time": "20:30:38",
       "action": "Web UI Manual Control",

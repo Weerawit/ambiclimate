@@ -594,17 +594,48 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 
 ---
 
-## 28. ฟื้นฟู DNS Redirect ชี้ไปที่ Router WAN IP เพื่อทะลุ DNS-Rebind ของ `dnsmasq`
+## 29. ปรับปรุง Web UI ให้ตรงตามคู่มือ Ambi Climate App (User Manual) และเพิ่มฟังก์ชันควบคุมไฟ LED / ปุ่ม Query เซ็นเซอร์
 
-### 1. ปัญหาที่ค้นพบจาก Live Log:
-* ในการทดสอบสด พบว่า Ambi Climate ส่ง DNS Query หา `connect.ambiclimate.com` และ `connect.smartambi.com` ซ้ำๆ ทุก 2-3 วินาที แต่ไม่มีการสร้าง TCP Connection เข้ามาที่พอร์ต 8866 หรือ 8867
-* **สาเหตุ:** ใน Commit `554707f` ได้มีการเปลี่ยนเป้าหมายของ Fake DNS จาก `ROUTER_WAN_IP` (`100.112.62.200`) มาเป็น `HOST_IP` (`192.168.1.138`)
-* เนื่องจาก `192.168.1.138` เป็น Private IP ตามมาตรฐาน RFC 1918 ทำให้ตัว `dnsmasq` ภายในเฟิร์มแวร์ของ Ambi ตรวจจับได้ว่าเป็น **DNS-Rebind Attack** (`--stop-dns-rebind`) และ **ทิ้ง (Drop) คำตอบ DNS นั้นทันที** ส่งผลให้ daemon `aircom` ไม่สามารถเชื่อมต่อกับ Cloud Mock Server ได้
+### 1. การถอดแบบ UI จากคู่มือทางการ (`ambi - manual.pdf` หน้า 10, 11, 14, 15):
+ถอดแบบดีไซน์ของหน้าจอควบคุมหลักจากคู่มือผู้ใช้งาน Ambi Climate App มาสร้างเป็น **`web_dashboard.html`** อย่างสมบูรณ์:
+1. **Top Navigation Bar (หน้า 10):**
+   * ชื่อห้อง `Living Room` พร้อมแท็กตำแหน่ง `Home • Ambi Climate 2`
+   * แถบแสดงสภาพอากาศจริงของห้อง (Actual Conditions Bar): แสดงอุณหภูมิห้อง `🌡️ XX°C`, ความชื้น `💧 XX%`, และแถบสถานะความสบาย (Comfort Pill เช่น `comfortable`, `too cold`, `too warm`)
+   * ปุ่มรีเฟรชด่วน `🔄` (Instant Refresh) ที่มุมขวาบน สำหรับกด Query เซ็นเซอร์สดจากตัวเครื่องได้ทันที
+2. **กราฟเส้นแสดงแนวโน้มสภาพอากาศย้อนหลัง 4 ชั่วโมง (4-Hour Climate Curve - หน้า 10):**
+   * แสดงค่าสูงสุด/ต่ำสุดของความชื้น (`H 57%`, `L 45%`)
+   * เส้นกราฟ 2 ชั้น: เส้นสีฟ้าอมฟ้าอ่อน (Cyan) สำหรับความชื้น และเส้นสีส้มแดง (Coral) สำหรับอุณหภูมิห้อง พร้อมไทม์ไลน์ `4h`, `3h`, `2h`, `1h`, `Now`
+3. **Hero Control - วงแหวนควบคุมความสบาย (Ambi Comfort Dial / Bubble - หน้า 10):**
+   * วงแหวนฟองแก้วเรืองแสง (Glassmorphic Bubble) ปรับเปลี่ยนสีตามดัชนีความสบาย (Comfort Index / Humidex)
+   * โหมด Comfort: แสดงสถานะการประเมินของ AI เช่น `comfortable`, `Feels 25°C`, และ `Target 26°C`
+   * โหมด Temperature / Manual: แสดงตัวเลขอุณหภูมิเป้าหมายขนาดใหญ่ `24°C`
+   * โหมด OFF: แสดงสถานะปิดแอร์
+4. **Interactive AI Comfort Feedback Chips (หน้า 10):**
+   * ชิปตัวเลือกสอน AI 5 ระดับ: `🥶 หนาวมาก`, `❄️ หนาวไป (+1°)`, `😊 สบายดี`, `🌤️ ร้อนไป (-1°)`, `🥵 ร้อนมาก` แตะเพื่อสอนโมเดล AI และปรับแอร์ Daikin ได้ทันที
+5. **แถบเมนู 4 แท็บเอกลักษณ์ของ Ambi Climate (หน้า 10) พร้อม Bottom Drawers (หน้า 14):**
+   * **[📊 Analytics]:** ประวัติการปรับจูนของ AI (History Table) และข้อมูลเชิงลึก
+   * **[🎚️ AC Settings]:** ถอดแบบหน้าจอตั้งค่าแอร์ตามหน้า 14 ของคู่มือ มีแถบปรับความเร็วพัดลม (Fan: Quiet, Low, Med, High, Auto), บานสวิง (Louver / Swing: Off, Down, Mid, Up, Auto), ตัวปรับอุณหภูมิ Stepper, และปุ่มเปิด/ปิดแอร์
+   * **[📱 Device]:** หน้าตั้งค่าตัวเครื่อง Ambi Climate 2:
+     * **เมนูสไลเดอร์ปรับความสว่างหลอดไฟ LED หน้าเครื่อง (PWM 0-10000)** พร้อมปุ่มทางลัด 4 ระดับ: `🌑 ปิดไฟ (0%)`, `🌙 หรี่ (25%)`, `🟢 ปกติ (57%)`, `☀️ สว่างสุด (100%)` และปุ่ม `🟢 ยืนยันไฟเขียว (Solid Green)`
+     * **ปุ่ม Query อุณหภูมิและความชื้นสดจาก Ambi (:8070)** ตามคำขอ
+     * เมนูสลับ Cloud Server (NCE / NCD) และตัวเปิดดู System Dump Log (NSL)
+   * **[⚡ Modes]:** หน้าสลับโหมด 5 โหมดหลักตามหน้า 11 ของคู่มือ:
+     1. `Comfort Mode` (Local AI Auto-Tuning)
+     2. `Temperature Mode` (คุมอุณหภูมิคงที่)
+     3. `Manual Mode` (คุมรีโมทตรงไม่ผ่าน AI)
+     4. `Away Mode` (ประหยัดพลังงานเมื่อไม่อยู่บ้าน)
+     5. `OFF Mode` (ปิดแอร์)
 
-### 2. แนวทางแก้ไข:
-* ปรับ `DNS_REDIRECT_IP` ใน `ambi_hub.py` กลับมาใช้ `ROUTER_WAN_IP` (`100.112.62.200`)
-* เนื่องจากไอพี `100.112.62.200` อยู่ในช่วง **Carrier-Grade NAT (RFC 6598 - 100.64.0.0/10)** ซึ่งอยู่นอกนิยามของ RFC 1918 Private IP ทำให้ `dnsmasq` ของ Ambi ไม่มองว่าเป็น DNS Rebind และยอมรับผลลัพธ์ 100%
-* เมื่อ Ambi ต่อไปที่ `100.112.62.200:8867` หรือ `8866` เราเตอร์จะทำ NAT Hairpinning วนกลับมาให้คอมพิวเตอร์ Local Hub (`192.168.1.138`) อย่างสมบูรณ์ ทำให้ Ambi สามารถเชื่อมต่อคลาวด์ในเครื่องได้สำเร็จและหยุดการส่ง DNS Query ซ้ำๆ
+### 2. การอัปเดต Backend API และ Console CLI:
+* **เพิ่ม Endpoint `/api/mode`:** รองรับการสลับโหมด Comfort, Temperature, Manual, Away, Off ผ่าน HTTP GET
+* **เพิ่ม Endpoint `/api/led/brightness`:** รองรับการปรับระดับ PWM แสงไฟ LED หน้าเครื่อง
+* **เพิ่ม Endpoint `/api/sensors/query` (และ `/api/sensors/refresh`):** รองรับการ Query ค่าเซ็นเซอร์สดจาก Ambi Port 8070 เมื่อกดปุ่มบน Web UI
+* **เพิ่มคำสั่ง Console CLI:**
+  * `[5]` : อ่านค่าเซ็นเซอร์สดทันที (Manual Query NTP / NHM / NLU)
+  * `[6]` : สั่งไฟ LED หน้าเครื่องเป็นสีเขียว (Solid Green)
+  * `[7]` : ปรับความสว่างหลอดไฟ LED (0=OFF, 1000-10000)
+  * `[M]` : สลับโหมด Ambi Climate (Comfort, Temperature, Manual, Away, Off)
+
 
 
 

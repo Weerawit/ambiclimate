@@ -244,6 +244,131 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
             hub_log(f"[-] Error setting LED to Green on {ip}: {e}")
             return False
 
+def set_ambi_led_brightness(level: int, target_ip=None):
+    """
+    Sets Ambi Climate LED brightness (0 = OFF, 1-10000 = PWM brightness).
+    Maintains Green color when turned ON.
+    """
+    ip = target_ip or get_ambi_ip() or get_cached_ambi_ip()
+    if not ip:
+        hub_log("[-] Cannot set brightness: Ambi IP not yet acquired.")
+        return False
+
+    level = max(0, min(10000, int(level)))
+    hub_log(f"[*] Setting Ambi Climate LED brightness to {level} on {ip}:8070...")
+    with AMBI_PORT_8070_LOCK:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(3.0)
+            s.connect((ip, 8070))
+
+            if level <= 0:
+                s.sendall(b"\x0700NSD\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NCD1\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NLL0\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                for ch in ["NLD00", "NLD10", "NLD20"]:
+                    s.sendall(b"\x0700" + ch.encode("ascii") + b"\r")
+                    time.sleep(0.08)
+                    try: s.recv(256)
+                    except Exception: pass
+                s.close()
+                hub_log(f"✅ [💡 LED OFF] Ambi Climate ({ip}) front LED is now turned OFF.")
+            else:
+                s.sendall(b"\x0700NSD\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NCD1\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NLL1 " + str(level).encode("ascii") + b"\r")
+                time.sleep(0.15)
+                try: s.recv(256)
+                except Exception: pass
+
+                # Maintain Green color (Red=0, Green=9, Blue=0)
+                s.sendall(b"\x0700NLD00\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NLD19\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.sendall(b"\x0700NLD20\r")
+                time.sleep(0.1)
+                try: s.recv(256)
+                except Exception: pass
+
+                s.close()
+                pct = round(level / 100)
+                hub_log(f"✅ [💡 LED BRIGHTNESS] Ambi Climate ({ip}) LED brightness set to {level} ({pct}%) Green.")
+            return True
+        except Exception as e:
+            hub_log(f"[-] Error setting LED brightness on {ip}: {e}")
+            return False
+
+def query_live_sensors(target_ip=None):
+    """
+    On-demand query of real-time temperature, humidity, luminosity from Ambi Climate Port 8070.
+    Updates AC_STATE and comfort evaluation immediately.
+    """
+    from test_daikin import get_live_sensors
+    ip = target_ip or get_ambi_ip() or get_cached_ambi_ip()
+    if not ip:
+        hub_log("[-] Cannot query sensors: Ambi IP not yet acquired.")
+        return {"status": "Error", "message": "Ambi IP not yet acquired"}
+
+    hub_log(f"[*] Querying live sensors on-demand from {ip}:8070...")
+    with AMBI_PORT_8070_LOCK:
+        live = get_live_sensors(ip, port=8070, timeout=3.5)
+
+    if live.get("temperature") is not None:
+        AC_STATE["room_temp"] = live["temperature"]
+    if live.get("humidity") is not None:
+        AC_STATE["room_humidity"] = live["humidity"]
+    if live.get("luminosity"):
+        AC_STATE["luminosity"] = live["luminosity"]
+
+    c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
+    AC_STATE["humidex"] = c["humidex"]
+    AC_STATE["comfort_score"] = c["score"]
+    AC_STATE["comfort_label"] = c["label"]
+    AC_STATE["comfort_badge_color"] = c["badge_color"]
+    AC_STATE["sensor_status"] = f"Manual Query ({ip})"
+    AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
+
+    hub_log(f"[MANUAL SENSOR QUERY] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C | Status: {c['label']}")
+    return {
+        "status": "OK",
+        "room_temp": AC_STATE["room_temp"],
+        "room_humidity": AC_STATE["room_humidity"],
+        "luminosity": AC_STATE.get("luminosity"),
+        "humidex": c["humidex"],
+        "comfort_score": c["score"],
+        "comfort_label": c["label"],
+        "comfort_badge_color": c["badge_color"],
+        "sensor_status": AC_STATE["sensor_status"],
+        "sensor_time": AC_STATE["sensor_time"]
+    }
+
 def led_keepalive_worker(interval_sec=120):
     """
     Periodically reaffirms Solid Green LED every interval_sec (default 120s)
@@ -307,6 +432,7 @@ IRP_ID = APPLIANCE["ZIRP_ID"]
 AC_STATE = {
     "power": "Off",  # Requirement 3: System will not auto-tune until AC is explicitly turned ON
     "mode": "Cool",
+    "ambi_mode": "Comfort",  # Comfort, Temperature, Manual, Away, Off (from Ambi User Guide)
     "temperature": 24,
     "fan": "Auto",
     "swing": "Auto",
@@ -640,6 +766,18 @@ def poll_live_sensors():
             AC_STATE["sensor_status"] = f"Error: {e}"
         time.sleep(20)
 
+DASHBOARD_HTML_FILE = os.path.join(DIR, "web_dashboard.html")
+
+def get_dashboard_html():
+    """Returns the authentic Ambi Climate App UI matching user manual, fallback to embedded HTML."""
+    if os.path.exists(DASHBOARD_HTML_FILE):
+        try:
+            with open(DASHBOARD_HTML_FILE, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            pass
+    return WEB_DASHBOARD_HTML
+
 WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -742,6 +880,13 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                     <div class="metric-label">ความรู้สึกจริง (Humidex)</div>
                     <div class="metric-val" style="color: #38bdf8;"><span id="roomFeels">--</span><span class="metric-unit">°C</span></div>
                 </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+                <span id="sensorTimeText" style="font-size: 11px; color: var(--text-muted);">อัปเดตล่าสุด: --</span>
+                <button class="btn-action" style="padding: 6px 14px; font-size: 12px; background: #0284c7; display: flex; align-items: center; gap: 4px;" onclick="querySensorsNow()">
+                    🔄 อ่านค่าเซนเซอร์สด (Query)
+                </button>
             </div>
 
             <!-- Comfort Badge -->
@@ -1315,6 +1460,40 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             }).encode('utf-8'))
             return
 
+        # 4.1 Mode Selection API (Comfort, Temperature, Manual, Away, Off - Ambi User Guide)
+        if path == '/api/mode':
+            m = query.get('mode', ['Comfort'])[0]
+            m_cap = m.capitalize()
+            if m_cap not in ('Comfort', 'Temperature', 'Manual', 'Away', 'Off'):
+                m_cap = 'Comfort'
+            AC_STATE['ambi_mode'] = m_cap
+            if m_cap == 'Off':
+                AC_STATE['power'] = 'Off'
+                send_daikin_ir(power='Off', reason="Mode Change: OFF")
+            elif m_cap == 'Comfort':
+                AC_STATE['power'] = 'On'
+                COMFORT_PROFILE["auto_tune_enabled"] = True
+                save_comfort_profile(COMFORT_PROFILE)
+                send_daikin_ir(power='On', reason="Mode Change: Comfort Mode")
+            elif m_cap == 'Temperature':
+                AC_STATE['power'] = 'On'
+                COMFORT_PROFILE["auto_tune_enabled"] = False
+                save_comfort_profile(COMFORT_PROFILE)
+                send_daikin_ir(power='On', reason="Mode Change: Temperature Mode")
+            elif m_cap == 'Manual':
+                AC_STATE['power'] = 'On'
+                COMFORT_PROFILE["auto_tune_enabled"] = False
+                save_comfort_profile(COMFORT_PROFILE)
+                send_daikin_ir(power='On', reason="Mode Change: Manual Mode")
+            elif m_cap == 'Away':
+                AC_STATE['power'] = 'Off'
+                send_daikin_ir(power='Off', reason="Mode Change: Away Mode")
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "ambi_mode": m_cap, "ac_state": AC_STATE}).encode('utf-8'))
+            return
+
         # 5. Cloud Status API
         if path == '/api/cloud/status':
             curr = get_cloud_server_setting()
@@ -1362,11 +1541,34 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "device_ip": get_ambi_ip()}).encode('utf-8'))
             return
 
-        # 10. Serve HTML Dashboard
+        # 10. Manual Sensor Refresh API (On-Demand)
+        if path == '/api/sensors/refresh':
+            res = query_live_sensors()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(res).encode('utf-8'))
+            return
+
+        # 11. Set LED Brightness API (0 = OFF, 1-10000 = PWM brightness)
+        if path == '/api/led/brightness':
+            try:
+                lvl = int(query.get('level', ['5700'])[0])
+            except (ValueError, TypeError):
+                lvl = 5700
+            ok = set_ambi_led_brightness(lvl)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "level": lvl, "device_ip": get_ambi_ip()}).encode('utf-8'))
+            return
+
+        # 12. Serve HTML Dashboard
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.end_headers()
-        self.wfile.write(WEB_DASHBOARD_HTML.encode('utf-8'))
+        html_page = get_dashboard_html()
+        self.wfile.write(html_page.encode('utf-8'))
 
 # DNS Server Domain Configuration
 AMBI_SPECIFIC_DOMAINS = [
@@ -1791,8 +1993,10 @@ if __name__ == '__main__':
         print(f"     [2] ยิงเปลี่ยน Cloud มาที่เครื่องนี้ TLS -> {HOST_IP}:8867 (NCE + NCD)")
         print(f"     [3] ยิงเปลี่ยน Cloud มาที่เครื่องนี้ TCP -> {HOST_IP}:8866 (NCE + NCD)")
         print("     [4] สั่ง Ambi Reconnect (NCD)")
-        print("     [5] อ่านค่าเซนเซอร์สด (NTP / NHM)")
+        print("     [5] อ่านค่าเซนเซอร์สดทันที (Manual Query NTP / NHM / NLU)")
         print("     [6] สั่งไฟ LED หน้าเครื่องเป็นสีเขียว (Solid Green)")
+        print("     [7] ปรับความสว่างหลอดไฟ LED (0=OFF, 1000-10000)")
+        print("     [M] สลับโหมด Ambi Climate (Comfort, Temperature, Manual, Away, Off)")
         print("     [L] ดึงและแสดง System Dump Log ของ Ambi (NSL)")
         print("     [R] Reset คืนค่า Cloud ฮ่องกง (connect.smartambi.com:8867)")
         print("=" * 65 + "\n")
@@ -1827,16 +2031,39 @@ if __name__ == '__main__':
                     if not target:
                         print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
                     else:
-                        print(f"\n[*] Querying live sensors from {target}:8070...")
-                        from test_daikin import get_live_sensors
-                        live = get_live_sensors(target, port=8070, timeout=3.5)
-                        t_val = f"{live['temperature']} °C" if live.get('temperature') is not None else "None"
-                        h_val = f"{live['humidity']} %" if live.get('humidity') is not None else "None"
-                        print(f"[INFO] Sensors -> Temp: {t_val} | Hum: {h_val}\n")
+                        print(f"\n[*] Querying live sensors on-demand from {target}:8070...")
+                        res = query_live_sensors(target)
+                        print(f"[INFO] Sensors -> Temp: {res.get('room_temp')} °C | Hum: {res.get('room_humidity')} % | Humidex: {res.get('humidex')} °C\n")
                 elif cmd in ("6", "G"):
                     target = get_ambi_ip() or get_cached_ambi_ip()
                     print(f"\n[*] Sending Green LED command to Ambi ({target})...")
                     set_ambi_led_green(target)
+                elif cmd == "7":
+                    target = get_ambi_ip() or get_cached_ambi_ip()
+                    if not target:
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        print("\nป้อนระดับความสว่าง LED (0 = ปิดไฟ, 1000-10000, ค่าเริ่มต้น 5700): ", end="", flush=True)
+                        try:
+                            lvl_str = sys.stdin.readline().strip()
+                            lvl = int(lvl_str)
+                            set_ambi_led_brightness(lvl, target)
+                        except Exception as ex:
+                            print(f"[!] Invalid brightness: {ex}")
+                elif cmd == "M":
+                    print("\nเลือกโหมด Ambi [1=Comfort, 2=Temperature, 3=Manual, 4=Away, 0=Off]: ", end="", flush=True)
+                    m_choice = sys.stdin.readline().strip()
+                    m_map = {"1": "Comfort", "2": "Temperature", "3": "Manual", "4": "Away", "0": "Off"}
+                    target_mode = m_map.get(m_choice)
+                    if target_mode:
+                        AC_STATE['ambi_mode'] = target_mode
+                        if target_mode == 'Off':
+                            send_daikin_ir(power='Off', reason="Console Mode: OFF")
+                        else:
+                            send_daikin_ir(power='On', reason=f"Console Mode: {target_mode}")
+                        print(f"[+] Ambi Mode switched to: {target_mode}\n")
+                    else:
+                        print("[!] Invalid mode choice.\n")
                 elif cmd == "L":
                     print(f"\n[*] Fetching Ambi System Dump Log (NSL) from {get_ambi_ip()}...")
                     log_content = fetch_ambi_system_log()

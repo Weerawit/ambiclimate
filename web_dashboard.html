@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ambi Climate - Living Room</title>
+    <style>
+        :root {
+            --ambi-teal: #00c4b4;
+            --ambi-teal-glow: rgba(0, 196, 180, 0.4);
+            --ambi-blue: #0284c7;
+            --ambi-dark: #070d19;
+            --ambi-surface: rgba(18, 28, 48, 0.88);
+            --ambi-surface-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --text-dim: #64748b;
+            --green: #10b981;
+            --blue: #3b82f6;
+            --amber: #f59e0b;
+            --red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #030712;
+            background: radial-gradient(circle at 50% 12%, #182848 0%, #0d1527 50%, #040814 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            overflow-x: hidden;
+        }
+
+        /* Mobile Frame matching Ambi Climate App (User Manual Page 10) */
+        .app-frame {
+            width: 100%;
+            max-width: 440px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(10, 17, 33, 0.75);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+        }
+
+        /* Top Navigation Bar (Page 10) */
+        .top-nav {
+            padding: 16px 20px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-bottom: 1px solid var(--ambi-surface-border);
+            background: rgba(10, 16, 29, 0.65);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-back {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            opacity: 0.85;
+            transition: opacity 0.2s;
+        }
+        .btn-back:hover { opacity: 1; }
+
+        .room-title-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .room-title {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .room-location {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-refresh {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--ambi-surface-border);
+            color: var(--ambi-teal);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-refresh:active { transform: rotate(180deg); }
+
+        /* Actual Room Conditions Bar (Page 10) */
+        .conditions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 20px;
+            padding: 6px 14px;
+        }
+
+        .condition-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .comfort-pill {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(0, 196, 180, 0.2);
+            color: var(--ambi-teal);
+            border: 1px solid rgba(0, 196, 180, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        /* 4-Hour Climate Curve Chart (Page 10) */
+        .chart-section {
+            padding: 16px 20px 0;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 90px;
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .chart-timeline {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        /* Center Hero Dial / Bubble (Page 10) */
+        .dial-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .dial-bubble {
+            width: 226px;
+            height: 226px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, rgba(0, 196, 180, 0.25) 0%, rgba(14, 165, 233, 0.12) 60%, rgba(10, 17, 33, 0.45) 100%);
+            border: 2.5px solid rgba(0, 196, 180, 0.55);
+            box-shadow: 0 0 35px var(--ambi-teal-glow), inset 0 0 25px rgba(0, 196, 180, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            user-select: none;
+        }
+        .dial-bubble:active {
+            transform: scale(0.97);
+        }
+
+        .dial-mode-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ambi-teal);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .dial-label {
+            font-size: 26px;
+            font-weight: 800;
+            color: #ffffff;
+            text-align: center;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .dial-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .dial-hint {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        /* Interactive Feedback Row (Page 10) */
+        .feedback-section {
+            width: 100%;
+            padding: 0 20px 16px;
+        }
+
+        .feedback-title {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feedback-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        .btn-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 12px;
+            padding: 10px 4px;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-chip:active {
+            transform: scale(0.94);
+            background: rgba(0, 196, 180, 0.25);
+            border-color: var(--ambi-teal);
+        }
+        .btn-chip span.emoji { font-size: 16px; }
+
+        /* Bottom Tab Bar (Page 10: 4 Iconic Tabs) */
+        .bottom-nav {
+            margin-top: auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: rgba(10, 16, 29, 0.88);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid var(--ambi-surface-border);
+            padding: 8px 6px 14px;
+            z-index: 10;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 0;
+            transition: color 0.2s;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            color: var(--ambi-teal);
+        }
+        .nav-tab-icon {
+            font-size: 20px;
+        }
+
+        /* Slide-up Modals / Drawers (Page 14 & 13) */
+        .drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer-content {
+            background: #111a2e;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .drawer-overlay.open .drawer-content {
+            transform: translateY(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--ambi-surface-border);
+            padding-bottom: 12px;
+        }
+        .drawer-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .btn-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #fff;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .control-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-toggle-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-opt {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--ambi-surface-border);
+            color: var(--text-sub);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1 1 auto;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .btn-opt.active {
+            background: var(--ambi-teal);
+            color: #030712;
+            border-color: var(--ambi-teal);
+            font-weight: 700;
+        }
+
+        .stepper-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 14px;
+            padding: 8px 16px;
+        }
+        .btn-step {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stepper-val {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--ambi-teal);
+        }
+
+        /* Action Buttons */
+        .btn-action {
+            background: var(--ambi-teal);
+            color: #030712;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .btn-action:active { opacity: 0.85; }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+        /* History list inside drawer */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            font-size: 11px;
+            border: 1px solid var(--ambi-surface-border);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(18, 28, 48, 0.95);
+            border: 1px solid var(--ambi-teal);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-frame">
+        <!-- Top Navigation Bar (Page 10) -->
+        <div class="top-nav">
+            <div class="nav-header">
+                <div class="nav-left">
+                    <button class="btn-back" onclick="openDrawer('drawerAnalytics')">←</button>
+                    <div class="room-title-box">
+                        <div class="room-title">Living Room</div>
+                        <div class="room-location">Home &bull; Ambi Climate 2</div>
+                    </div>
+                </div>
+                <button class="btn-refresh" title="อ่านค่าเซนเซอร์สด (Query)" onclick="querySensorsNow()">
+                    <span id="refreshIcon">🔄</span>
+                </button>
+            </div>
+
+            <!-- Actual Room Conditions Bar (Page 10) -->
+            <div class="conditions-bar">
+                <div class="condition-item">
+                    <span>🌡️</span>
+                    <span id="roomTemp">--</span><span>°C</span>
+                </div>
+                <div class="condition-item">
+                    <span>💧</span>
+                    <span id="roomHum">--</span><span>%</span>
+                </div>
+                <div id="comfortPill" class="comfort-pill" onclick="openDrawer('drawerModes')">
+                    comfortable
+                </div>
+            </div>
+        </div>
+
+        <!-- 4-Hour Climate Curve Chart (Page 10) -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <span id="chartHighHum">H 57.2%</span>
+                <span id="chartStatusText">อุณหภูมิ & ความชื้นย้อนหลัง 4 ชม.</span>
+                <span id="chartLowHum">L 45.0%</span>
+            </div>
+            <div class="chart-container">
+                <svg class="chart-svg" viewBox="0 0 400 90" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="humGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#0284c7" stop-opacity="0.0"/>
+                        </linearGradient>
+                        <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#f87171" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#f87171" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Humidity Area & Line (Cyan/Blue) -->
+                    <path id="curveHumArea" d="M0,50 Q100,30 200,60 T400,40 L400,90 L0,90 Z" fill="url(#humGrad)"/>
+                    <path id="curveHum" d="M0,50 Q100,30 200,60 T400,40" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+                    <!-- Temperature Line (Coral/Red) -->
+                    <path id="curveTemp" d="M0,70 Q100,65 200,45 T400,55" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round"/>
+                    <!-- Live marker dot -->
+                    <circle id="dotHum" cx="400" cy="40" r="4" fill="#38bdf8"/>
+                    <circle id="dotTemp" cx="400" cy="55" r="4" fill="#f87171"/>
+                </svg>
+            </div>
+            <div class="chart-timeline">
+                <span>4h</span>
+                <span>3h</span>
+                <span>2h</span>
+                <span>1h</span>
+                <span style="color: var(--ambi-teal); font-weight: 700;">Now</span>
+            </div>
+        </div>
+
+        <!-- Center Hero Dial / Bubble (Page 10) -->
+        <div class="dial-section">
+            <div class="dial-bubble" id="dialBubble" onclick="openDrawer('drawerAC')">
+                <div class="dial-mode-badge" id="dialModeBadge">COMFORT MODE</div>
+                <div class="dial-label" id="dialLabel">comfortable</div>
+                <div class="dial-sub" id="dialSub">Feels 25.0°C &bull; AC 24°C</div>
+                <div class="dial-hint" id="dialHint">แตะเพื่อปรับแอร์ Daikin</div>
+            </div>
+        </div>
+
+        <!-- Interactive AI Comfort Feedback Row (Page 10) -->
+        <div class="feedback-section">
+            <div class="feedback-title">🎯 ตอนนี้คุณรู้สึกอย่างไร? (สอน AI ปรับจูน)</div>
+            <div class="feedback-grid">
+                <button class="btn-chip" onclick="sendFeedback('freezing')">
+                    <span class="emoji">🥶</span>
+                    <span>หนาวมาก</span>
+                </button>
+                <button class="btn-chip" onclick="sendFeedback('cold')">
+                    <span class="emoji">❄️</span>
+                    <span>หนาวไป</span>
+                </button>
+                <button class="btn-chip" style="background: rgba(0, 196, 180, 0.15); border-color: rgba(0, 196, 180, 0.4);" onclick="sendFeedback('comfy')">
+                    <span class="emoji">😊</span>
+                    <span>สบายดี</span>
+                </button>
+                <button class="btn-chip" onclick="sendFeedback('warm')">
+                    <span class="emoji">🌤️</span>
+                    <span>ร้อนไป</span>
+                </button>
+                <button class="btn-chip" onclick="sendFeedback('hot')">
+                    <span class="emoji">🥵</span>
+                    <span>ร้อนมาก</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar (Page 10: 4 Iconic Tabs) -->
+        <div class="bottom-nav">
+            <button class="nav-tab" onclick="openDrawer('drawerAnalytics')">
+                <span class="nav-tab-icon">📊</span>
+                <span>Analytics</span>
+            </button>
+            <button class="nav-tab" onclick="openDrawer('drawerAC')">
+                <span class="nav-tab-icon">🎚️</span>
+                <span>AC Settings</span>
+            </button>
+            <button class="nav-tab" onclick="openDrawer('drawerDevice')">
+                <span class="nav-tab-icon">📱</span>
+                <span>Device</span>
+            </button>
+            <button class="nav-tab" onclick="openDrawer('drawerModes')">
+                <span class="nav-tab-icon">⚡</span>
+                <span>Modes</span>
+            </button>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER 1: AC SETTINGS (Exact replica of Page 14)     -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerAC" onclick="handleOverlayClick(event, 'drawerAC')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title">🎚️ AC Settings (Daikin ARC480A46)</div>
+                    <button class="btn-close" onclick="closeDrawer('drawerAC')">✕</button>
+                </div>
+
+                <div style="font-size: 12px; color: var(--text-sub); line-height: 1.4;">
+                    Ambi Climate is in <b id="acDrawerModeText" style="color: var(--ambi-teal);">Comfort Mode</b> and controlling Daikin AC via IR Port 4998.
+                </div>
+
+                <!-- Temperature Stepper -->
+                <div class="control-group">
+                    <div class="control-label">Target Temperature</div>
+                    <div class="stepper-row">
+                        <button class="btn-step" onclick="adjustTemp(-1)">−</button>
+                        <div class="stepper-val"><span id="acTempDisplay">24</span>°C</div>
+                        <button class="btn-step" onclick="adjustTemp(+1)">+</button>
+                    </div>
+                </div>
+
+                <!-- Fan Speed (Page 14) -->
+                <div class="control-group">
+                    <div class="control-label">Fan Speed</div>
+                    <div class="btn-toggle-group">
+                        <button class="btn-opt" id="fan-quiet" onclick="setFan('Quiet')">Quiet</button>
+                        <button class="btn-opt" id="fan-low" onclick="setFan('Low')">Low</button>
+                        <button class="btn-opt" id="fan-med" onclick="setFan('med')">Med</button>
+                        <button class="btn-opt" id="fan-high" onclick="setFan('High')">High</button>
+                        <button class="btn-opt" id="fan-auto" onclick="setFan('Auto')">Auto</button>
+                    </div>
+                </div>
+
+                <!-- Louver / Swing (Page 14) -->
+                <div class="control-group">
+                    <div class="control-label">Louver / Swing</div>
+                    <div class="btn-toggle-group">
+                        <button class="btn-opt" id="swing-off" onclick="setSwing('off')">Off</button>
+                        <button class="btn-opt" id="swing-down" onclick="setSwing('down')">Down</button>
+                        <button class="btn-opt" id="swing-mid" onclick="setSwing('mid')">Mid</button>
+                        <button class="btn-opt" id="swing-up" onclick="setSwing('up')">Up</button>
+                        <button class="btn-opt" id="swing-auto" onclick="setSwing('auto')">Auto</button>
+                    </div>
+                </div>
+
+                <!-- Power Controls -->
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                    <button class="btn-action" onclick="setAC({power:'On', temp:24, mode:'Cool'})">
+                        ❄️ เปิดแอร์ (Cool 24°C)
+                    </button>
+                    <button class="btn-action btn-danger" onclick="setAC({power:'Off'})">
+                        🔴 ปิดแอร์ (OFF)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER 2: MODES (Exact replica of Page 11)           -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerModes" onclick="handleOverlayClick(event, 'drawerModes')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title">⚡ Ambi Climate Modes</div>
+                    <button class="btn-close" onclick="closeDrawer('drawerModes')">✕</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Comfort Mode -->
+                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Comfort')">
+                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🌟 Comfort Mode (AI Auto-Tune)</div>
+                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
+                            Give feedback to personalize comfort. AI continuously auto-tunes Daikin AC based on Humidex.
+                        </div>
+                    </div>
+
+                    <!-- Temperature Mode -->
+                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Temperature')">
+                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🎯 Temperature Mode</div>
+                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
+                            Select a set target temperature. Ambi Climate maintains precise temperature target.
+                        </div>
+                    </div>
+
+                    <!-- Manual Mode -->
+                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Manual')">
+                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🕹️ Manual Mode</div>
+                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
+                            Controls your AC as you would with your normal remote without smart AI automation.
+                        </div>
+                    </div>
+
+                    <!-- Away Mode -->
+                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Away')">
+                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🏡 Away Mode</div>
+                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
+                            Energy-saving climate monitoring while away from home.
+                        </div>
+                    </div>
+
+                    <!-- OFF Mode -->
+                    <div class="btn-opt btn-danger" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Off')">
+                        <div style="font-weight: 700; font-size: 14px;">🔴 OFF Mode</div>
+                        <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">
+                            Turns off your Daikin air conditioner completely.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER 3: DEVICE (LED, SENSORS, CLOUD, LOGS)        -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerDevice" onclick="handleOverlayClick(event, 'drawerDevice')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title">📱 Ambi Climate 2 Device Settings</div>
+                    <button class="btn-close" onclick="closeDrawer('drawerDevice')">✕</button>
+                </div>
+
+                <!-- 1. Front LED Brightness (Menu according to user request) -->
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="control-label">💡 ปรับความสว่างหลอดไฟ LED หน้าเครื่อง</span>
+                        <span id="brightnessValText" style="font-size: 13px; font-weight: 700; color: var(--ambi-teal);">5700 (57%)</span>
+                    </div>
+                    <input type="range" id="brightnessSlider" min="0" max="10000" step="500" value="5700" 
+                           style="width: 100%; accent-color: var(--ambi-teal); cursor: pointer; margin: 6px 0;" 
+                           onchange="changeBrightness(this.value)" oninput="updateBrightnessLabel(this.value)">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(0)">🌑 ปิดไฟ 0%</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(2500)">🌙 หรี่ 25%</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(5700)">🟢 ปกติ 57%</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(10000)">☀️ สุด 100%</button>
+                    </div>
+                    <button class="btn-action" style="background: #10b981; margin-top: 4px;" onclick="setLedGreen()">
+                        🟢 สั่งไฟหน้าเครื่องเป็นสีเขียว (Solid Green)
+                    </button>
+                </div>
+
+                <!-- 2. On-Demand Sensor Query (Query Button according to user request) -->
+                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                    <div class="control-label">🌡️ อ่านค่าเซนเซอร์สด (On-Demand Query)</div>
+                    <button class="btn-action" style="background: #0284c7;" onclick="querySensorsNow()">
+                        🔄 Query อุณหภูมิ & ความชื้นสดเดี๋ยวนี้ (:8070)
+                    </button>
+                    <div id="sensorDetailText" style="font-size: 11px; color: var(--text-dim); text-align: center;">
+                        Passive Push Mode &bull; อัปเดตล่าสุด: --
+                    </div>
+                </div>
+
+                <!-- 3. Cloud Target Redirect (NCE / NCD) -->
+                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                    <div class="control-label">☁️ จัดการ Cloud Server (NCE / NCD)</div>
+                    <div style="font-size: 11px; color: var(--text-sub);">
+                        เป้าหมายปัจจุบัน: <b id="currentCloudTarget" style="color: var(--ambi-teal);">กำลังตรวจสอบ...</b>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;">
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('192.168.1.138:8867')">ชี้มาเครื่องนี้ (:8867 TLS)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('192.168.1.138:8866')">ชี้มาเครื่องนี้ (:8866 TCP)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="reconnectCloud()">⚡ สั่ง NCD ต่อใหม่</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('connect.smartambi.com:8867')">↩️ คืนค่า Cloud HK</button>
+                    </div>
+                </div>
+
+                <!-- 4. System Dump Log (NSL) -->
+                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                    <button class="btn-action" style="background: #4f46e5;" onclick="viewSystemLog()">
+                        📋 ดึงดู System Dump Log ของ Ambi (NSL)
+                    </button>
+                    <pre id="syslogModal" style="display: none; background: #070c17; padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-size: 10px; color: #38bdf8; border: 1px solid var(--ambi-surface-border); white-space: pre-wrap; font-family: monospace;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER 4: ANALYTICS (HISTORY & INSIGHTS Page 15)     -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerAnalytics" onclick="handleOverlayClick(event, 'drawerAnalytics')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title">📊 Climate Analytics & History</div>
+                    <button class="btn-close" onclick="closeDrawer('drawerAnalytics')">✕</button>
+                </div>
+
+                <div style="font-size: 12px; color: var(--text-sub);">
+                    ประวัติการส่งสัญญาณ IR และการปรับจูนของ Local Comfort AI
+                </div>
+
+                <div class="history-list" id="historyList">
+                    <div style="text-align: center; padding: 20px; color: var(--text-dim);">
+                        กำลังโหลดข้อมูลประวัติ...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span>✅</span>
+        <span id="toastMsg">ส่งสัญญาณเรียบร้อย</span>
+    </div>
+
+    <script>
+        let currentState = null;
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        function openDrawer(id) {
+            document.querySelectorAll('.drawer-overlay').forEach(d => d.classList.remove('open'));
+            document.getElementById(id)?.classList.add('open');
+        }
+
+        function closeDrawer(id) {
+            document.getElementById(id)?.classList.remove('open');
+        }
+
+        function handleOverlayClick(e, id) {
+            if (e.target.id === id) closeDrawer(id);
+        }
+
+        // Live Dashboard Update Loop
+        async function updateDashboard() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                currentState = data;
+
+                // 1. Top conditions
+                const rt = data.ac_state.room_temp;
+                const rh = data.ac_state.room_humidity;
+                document.getElementById('roomTemp').innerText = (rt !== null && rt !== undefined) ? rt : '--';
+                document.getElementById('roomHum').innerText = (rh !== null && rh !== undefined) ? rh : '--';
+
+                // Comfort Pill & Badge
+                const pill = document.getElementById('comfortPill');
+                pill.innerText = data.comfort.label || 'comfortable';
+                pill.style.color = data.comfort.badge_color;
+                pill.style.borderColor = data.comfort.badge_color + '66';
+                pill.style.background = data.comfort.badge_color + '22';
+
+                // 2. Dial Bubble State
+                const dial = document.getElementById('dialBubble');
+                const dialLabel = document.getElementById('dialLabel');
+                const dialSub = document.getElementById('dialSub');
+                const dialBadge = document.getElementById('dialModeBadge');
+                const isACOn = (data.ac_state.power && data.ac_state.power.toLowerCase() === 'on');
+                const ambiMode = data.ac_state.ambi_mode || 'Comfort';
+
+                dialBadge.innerHTML = (ambiMode.toUpperCase() + ' MODE') + (isACOn ? ' &bull; AC ON' : ' &bull; AC OFF');
+                document.getElementById('acDrawerModeText').innerText = ambiMode + ' Mode';
+
+                if (!isACOn) {
+                    dialLabel.innerText = 'OFF';
+                    dialSub.innerText = 'แอร์ปิดอยู่ • แตะเพื่อเปิดแอร์';
+                    dial.style.borderColor = '#64748b';
+                    dial.style.boxShadow = '0 0 25px rgba(100, 116, 139, 0.2)';
+                } else if (ambiMode === 'Comfort') {
+                    dialLabel.innerText = data.comfort.label || 'comfortable';
+                    dialSub.innerText = `Feels ${data.comfort.humidex || '--'}°C • Target ${data.comfort.target_humidex || 26}°C`;
+                    dial.style.borderColor = data.comfort.badge_color;
+                    dial.style.boxShadow = '0 0 35px ' + data.comfort.badge_color + '44';
+                } else {
+                    dialLabel.innerText = data.ac_state.temperature + '°C';
+                    dialSub.innerText = `Mode: ${data.ac_state.mode} • Fan: ${data.ac_state.fan}`;
+                    dial.style.borderColor = '#0284c7';
+                    dial.style.boxShadow = '0 0 35px rgba(2, 132, 199, 0.35)';
+                }
+
+                // 3. AC Drawer Controls
+                document.getElementById('acTempDisplay').innerText = data.ac_state.temperature;
+                const currFan = (data.ac_state.fan || 'Auto').toLowerCase();
+                document.querySelectorAll('#drawerAC .btn-opt').forEach(b => b.classList.remove('active'));
+                if (currFan === 'auto') document.getElementById('fan-auto')?.classList.add('active');
+                else if (currFan === 'quiet' || currFan === 'silent') document.getElementById('fan-quiet')?.classList.add('active');
+                else if (currFan === 'low' || currFan === '1') document.getElementById('fan-low')?.classList.add('active');
+                else if (currFan === 'med' || currFan === '3') document.getElementById('fan-med')?.classList.add('active');
+                else if (currFan === 'high' || currFan === '5') document.getElementById('fan-high')?.classList.add('active');
+
+                // 4. Sensor Details & Chart markers
+                if (rh) {
+                    document.getElementById('chartHighHum').innerText = 'H ' + Math.min(100, Math.round(rh + 6)) + '%';
+                    document.getElementById('chartLowHum').innerText = 'L ' + Math.max(20, Math.round(rh - 8)) + '%';
+                }
+                document.getElementById('sensorDetailText').innerText = 
+                    `${data.ac_state.sensor_status || 'Passive Push'} • อัปเดตล่าสุด: ${data.ac_state.sensor_time || '--'}`;
+
+                // 5. History List in Drawer
+                const hist = data.profile.history || [];
+                const histElem = document.getElementById('historyList');
+                if (hist.length > 0) {
+                    histElem.innerHTML = hist.map(item => `
+                        <div class="history-item">
+                            <div>
+                                <b style="color: #fff;">${item.action}</b>
+                                <div style="color: var(--text-dim); margin-top: 2px;">
+                                    AC ${item.temp}°C | Fan: ${item.fan} | Room: ${item.room_temp || '--'}°C (${item.room_humidity || '--'}%)
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color: var(--ambi-teal);">${item.time}</span>
+                                <div style="font-size: 9px; color: ${item.result && item.result.includes('OK') ? '#34d399' : '#94a3b8'};">
+                                    ${item.result || ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    histElem.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-dim);">ยังไม่มีประวัติการสั่งงาน</div>';
+                }
+            } catch (e) {
+                console.error("Dashboard update error:", e);
+            }
+        }
+
+        // Feedback to AI (Teaching Mode)
+        async function sendFeedback(choice) {
+            showToast('⏳ กำลังสอน AI & ปรับแอร์ Daikin...');
+            try {
+                const res = await fetch('/api/feedback?choice=' + encodeURIComponent(choice));
+                const json = await res.json();
+                showToast('✅ ' + (json.action || 'บันทึกสำเร็จ'));
+                updateDashboard();
+            } catch (e) {
+                showToast('❌ ส่งข้อมูลไม่สำเร็จ');
+            }
+        }
+
+        // Stepper adjust temperature
+        async function adjustTemp(delta) {
+            if (!currentState) return;
+            const newT = currentState.ac_state.temperature + delta;
+            await setAC({temp: newT});
+        }
+
+        // Fan control
+        async function setFan(fan) {
+            await setAC({fan: fan});
+        }
+
+        // Swing control
+        async function setSwing(swing) {
+            await setAC({swing: swing});
+        }
+
+        // General AC command dispatch
+        async function setAC(params) {
+            showToast('📡 กำลังยิงสัญญาณ IR Daikin...');
+            const q = new URLSearchParams(params).toString();
+            try {
+                const res = await fetch('/api/control?' + q);
+                const json = await res.json();
+                showToast('✅ Daikin IR ตอบรับ: ' + (json.ir_result || 'OK'));
+                updateDashboard();
+            } catch (e) {
+                showToast('❌ ส่งสัญญาณไม่สำเร็จ');
+            }
+        }
+
+        // Ambi Modes switcher (Page 11)
+        async function switchAmbiMode(mode) {
+            showToast('⚡ สลับโหมดเป็น ' + mode + ' Mode...');
+            try {
+                const res = await fetch('/api/mode?mode=' + encodeURIComponent(mode));
+                const json = await res.json();
+                showToast('✅ ใช้งาน ' + json.ambi_mode + ' Mode เรียบร้อย');
+                closeDrawer('drawerModes');
+                updateDashboard();
+            } catch (e) {
+                showToast('❌ สลับโหมดไม่สำเร็จ');
+            }
+        }
+
+        // On-demand Sensor Query
+        async function querySensorsNow() {
+            const icon = document.getElementById('refreshIcon');
+            if (icon) icon.style.display = 'inline-block';
+            showToast('🔄 กำลังอ่านค่าเซนเซอร์สดจาก Ambi :8070...');
+            try {
+                const res = await fetch('/api/sensors/query');
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    showToast(`✅ อัปเดตเซนเซอร์: ${data.room_temp}°C | ${data.room_humidity}%`);
+                    updateDashboard();
+                } else {
+                    showToast('❌ ' + (data.message || 'อ่านค่าไม่สำเร็จ'));
+                }
+            } catch (e) {
+                showToast('❌ เชื่อมต่อล้มเหลว');
+            }
+        }
+
+        // LED Brightness Controls
+        function updateBrightnessLabel(val) {
+            const pct = Math.round(val / 100);
+            document.getElementById('brightnessValText').innerText = `${val} (${pct}%)`;
+        }
+
+        async function setBrightnessPreset(val) {
+            document.getElementById('brightnessSlider').value = val;
+            updateBrightnessLabel(val);
+            await changeBrightness(val);
+        }
+
+        async function changeBrightness(val) {
+            showToast(`💡 ปรับความสว่าง LED เป็น ${val}...`);
+            try {
+                const res = await fetch('/api/led/brightness?level=' + encodeURIComponent(val));
+                const json = await res.json();
+                if (json.status === 'OK') {
+                    const pct = Math.round(val / 100);
+                    showToast(val <= 0 ? '🌑 ปิดไฟ LED เรียบร้อย' : `💡 ปรับความสว่างเป็น ${pct}% แล้ว`);
+                } else {
+                    showToast('❌ ปรับความสว่างไม่สำเร็จ');
+                }
+            } catch (e) {
+                showToast('❌ เชื่อมต่อล้มเหลว');
+            }
+        }
+
+        async function setLedGreen() {
+            showToast('🟢 กำลังส่งคำสั่งไฟเขียว Solid Green...');
+            try {
+                const res = await fetch('/api/led/green');
+                const json = await res.json();
+                if (json.status === 'OK') {
+                    showToast('✅ หลอดไฟหน้าเครื่องเป็นสีเขียวแล้ว!');
+                } else {
+                    showToast('❌ ส่งคำสั่งไม่สำเร็จ');
+                }
+            } catch (e) {
+                showToast('❌ เกิดข้อผิดพลาด');
+            }
+        }
+
+        // Cloud Server Settings
+        async function fetchCloudStatus() {
+            try {
+                const res = await fetch('/api/cloud/status');
+                const json = await res.json();
+                document.getElementById('currentCloudTarget').innerText = json.cloud_server || 'ไม่พบข้อมูล';
+            } catch (e) {}
+        }
+
+        async function changeCloud(server) {
+            showToast('🚀 กำลังเปลี่ยน Cloud Server...');
+            try {
+                const res = await fetch('/api/cloud/change?server=' + encodeURIComponent(server));
+                const json = await res.json();
+                showToast('✅ เปลี่ยน Cloud สำเร็จ: ' + server);
+                fetchCloudStatus();
+            } catch (e) {
+                showToast('❌ เปลี่ยน Cloud ไม่สำเร็จ');
+            }
+        }
+
+        async function reconnectCloud() {
+            showToast('⚡ ส่งคำสั่ง NCD ตัดและต่อใหม่...');
+            try {
+                const res = await fetch('/api/cloud/reconnect');
+                const json = await res.json();
+                showToast('✅ คำสั่ง NCD สำเร็จ');
+            } catch (e) {
+                showToast('❌ ส่ง NCD ไม่สำเร็จ');
+            }
+        }
+
+        async function viewSystemLog() {
+            showToast('⏳ ดึง System Dump Log จาก Ambi...');
+            const box = document.getElementById('syslogModal');
+            box.style.display = 'block';
+            box.innerText = 'กำลังส่ง NSL ไปยัง Ambi:8070... กรุณารอสักครู่';
+            try {
+                const res = await fetch('/api/system_log');
+                const text = await res.text();
+                box.innerText = text || 'ไม่มี Log ตอบกลับ';
+                showToast('✅ ดึง Log สำเร็จ');
+            } catch (e) {
+                box.innerText = 'เกิดข้อผิดพลาด: ' + e;
+                showToast('❌ ดึง Log ล้มเหลว');
+            }
+        }
+
+        // Initial calls and loops
+        updateDashboard();
+        fetchCloudStatus();
+        setInterval(updateDashboard, 3000);
+        setInterval(fetchCloudStatus, 15000);
+    </script>
+</body>
+</html>
