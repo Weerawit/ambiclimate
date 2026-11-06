@@ -674,6 +674,26 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 * อัปเดต `docker-compose.yml` ให้รองรับ `network_mode: "host"` สำหรับ Linux / Raspberry Pi เพื่อให้รับ DNS UDP 53 และ Beacon UDP 9131 ได้อย่างสมบูรณ์แบบ พร้อม fallback port mappings สำหรับสภาพแวดล้อมอื่นๆ
 * สามารถ Clone จาก GitHub (`git clone https://github.com/Weerawit/ambiclimate.git`) และสั่ง `docker compose up -d --build` เพื่อรันได้ทันทีโดยไม่ต้องแก้ไขค่า IP ด้วยตนเอง
 
+---
+
+## 32. ปรับเปลี่ยนพอร์ต Web Dashboard เป็น 9090 และแก้ปัญหา IP ผิดพลาดบน Raspbian 10 (Buster)
+
+### 1. สาเหตุที่ได้ IP ผิดบน Raspbian Buster:
+* ใน `docker-compose.yml` ก่อนหน้า มีการระบุตัวแปรสภาพแวดล้อมดีฟอลต์ `HOST_IP=${HOST_IP:-192.168.1.138}` เมื่อรันบน Raspberry Pi โดยไม่ได้ตั้งค่า `$HOST_IP` ใน shell ของระบบ ทำให้ Docker Compose ส่งค่า `192.168.1.138` เข้าไปในคอนเทนเนอร์ ส่งผลให้โค้ดข้ามการตรวจจับและได้ IP ผิด
+* บน Raspbian Buster (Debian 10) การใช้ socket connect เพียงอย่างเดียวอาจเจอปัญหาหากเน็ตเวิร์กยังไม่ได้เชื่อมต่อไปยังภายนอก (8.8.8.8)
+
+### 2. แนวทางแก้ไขและการตรวจจับแบบหลายชั้น (Multi-layer Auto Detection):
+* **นำ `${HOST_IP:-192.168.1.138}` ออกจาก `docker-compose.yml`:** เพื่อให้ระบบทำงานในโหมดตรวจจับอัตโนมัติ 100%
+* **เพิ่มลำดับการตรวจหา IP บน Raspbian 10 Buster:**
+  1. คำสั่งเคอร์เนล `ip -4 route get <gateway_ip>` เพื่อดึง interface IP ที่ใช้คุยกับเราเตอร์จริง (`src <ip>`)
+  2. คำสั่ง `hostname -I` ของ Raspbian Buster โดยกรองตัด IP ของ loopback, link-local, และ docker0 bridge ออก
+  3. Kernel UDP Socket Routing Probe ตรงไปยัง Gateway IP และ 8.8.8.8
+* **เปลี่ยนพอร์ต Web Dashboard เป็น 9090:**
+  * กำหนดพอร์ตหลักเป็น `9090` ผ่านตัวแปร `DASHBOARD_PORT` และ `WEB_PORT=9090` ใน `docker-compose.yml`
+  * เพิ่ม Fallback Listener บนพอร์ต `8080` คู่ขนาน เพื่อให้ลิงก์เดิมยังคงใช้งานได้
+  * อัปเดต `Dockerfile` ให้ `EXPOSE 9090 8080 ...`
+
+
 
 
 

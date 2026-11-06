@@ -2,7 +2,7 @@
 title Ambi Climate Local Hub
 cd /d "%~dp0"
 echo ========================================================
-echo   Starting Ambi Climate Local Hub (192.168.1.138)
+echo   Starting Ambi Climate Local Hub & Web Dashboard (:9090)
 echo ========================================================
 echo.
 python ambi_hub.py
