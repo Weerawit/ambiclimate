@@ -514,6 +514,27 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 4. **DNS Redirection & Cloud Targeting**:
    * ปรับ DNS Redirection ชี้มาที่ `HOST_IP` (`192.168.1.138`) โดยตรงสำหรับโดเมน Ambi ทุกโดเมน
 
+---
+
+## 25. ปิด Active Polling และเปิดระบบ Passive Push + สั่งไฟเขียว (Solid Green) อัตโนมัติ
+
+### 1. ปิด Active Sensor Poller:
+* ปิด Thread `poll_live_sensors` จากการยิงพอร์ต 8070 ทุก 20 วินาที เพื่อไม่ให้ไปแย่ง Socket และรอรับข้อมูลที่ Ambi Push เข้ามาเอง
+* เพิ่มตัวตรวจจับ Telemetry Push ทั้งบน Cloud Mock (TCP 8866 / TLS 8867) และ HTTP POST/PUT
+
+### 2. ระบบสั่งไฟเขียว (Solid Green) ทันทีที่ได้ IP:
+* พัฒนาฟังก์ชัน `set_ambi_led_green(target_ip)` ใน `ambi_hub.py`:
+  * ส่ง `\x0700NSD\r` (Setup Done)
+  * ส่ง `\x0700NCD1\r` (Stop Offline Blink Loop)
+  * ส่ง `\x0700NLL1 5730\r` (Enable PWM Brightness)
+  * ส่ง `\x0700NLD00\r` + `NLD19\r` + `NLD20\r` (Red OFF, Green ON Level 9, Blue OFF)
+* เชื่อมโยงให้ยิงทันทีที่:
+  1. ล็อค IP จาก DNS สำเร็จ
+  2. กดปุ่ม `[6]` หรือ `[G]` ใน Console CLI (พร้อมระบบ Fallback IP `192.168.1.156`)
+  3. กดปุ่มสีเขียว `🟢 สั่งไฟหน้าเครื่องเป็นสีเขียว (Solid Green)` บน Web Dashboard
+* **ผลการทดสอบจริง:** ยิงคำสั่งสำเร็จ 100% ตัวเครื่องตอบรับและไฟหน้าเครื่องเปลี่ยนเป็น **สีเขียวนิ่ง (Solid Green)** เรียบร้อย!
+
+
 
 
 
