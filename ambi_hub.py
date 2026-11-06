@@ -50,6 +50,8 @@ def update_ambi_ip(new_ip, source=""):
         save_ambi_ip(new_ip)
         src_tag = f" via {source}" if source else ""
         hub_log(f"\n{'='*65}\n🎯 [STEP 1: CAPTURED AMBI IP] Detected {AMBI_IP}{src_tag} (was {old_ip})\n{'='*65}\n")
+        # Trigger Green LED immediately in background
+        threading.Thread(target=set_ambi_led_green, args=(new_ip,), daemon=True).start()
 
 def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
     """Sends framed command to Ambi on Port 8070 and returns the raw response."""
@@ -163,6 +165,64 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
         except Exception as e:
             hub_log(f"[-] Error fetching system log from {ip}: {e}")
             return f"Error connecting to Ambi on {ip}:8070 -> {e}"
+
+def set_ambi_led_green(target_ip=None, brightness=5730):
+    """
+    Directly sets Ambi Climate hardware LED to SOLID GREEN:
+    1. Sends NSD (Setup Done) & NCD1 (Stop offline blink loop)
+    2. Sends NLL1 (Enable brightness PWM)
+    3. Sets RGB: Red=0 (NLD00), Green=9 (NLD19), Blue=0 (NLD20)
+    """
+    ip = target_ip or get_ambi_ip()
+    if not ip:
+        hub_log("[-] Cannot set LED: Ambi IP not yet acquired.")
+        return False
+    hub_log(f"[*] Setting Ambi Climate LED to SOLID GREEN on {ip}:8070...")
+    with AMBI_PORT_8070_LOCK:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(3.0)
+            s.connect((ip, 8070))
+
+            # 1. Stop offline blink loop
+            s.sendall(b"\x0700NSD\r")
+            time.sleep(0.12)
+            try: s.recv(256)
+            except Exception: pass
+
+            s.sendall(b"\x0700NCD1\r")
+            time.sleep(0.12)
+            try: s.recv(256)
+            except Exception: pass
+
+            # 2. Enable brightness PWM
+            s.sendall(b"\x0700NLL1 " + str(brightness).encode("ascii") + b"\r")
+            time.sleep(0.15)
+            try: s.recv(256)
+            except Exception: pass
+
+            # 3. Set Green: R=0, G=9, B=0
+            s.sendall(b"\x0700NLD00\r")
+            time.sleep(0.12)
+            try: s.recv(256)
+            except Exception: pass
+
+            s.sendall(b"\x0700NLD19\r")
+            time.sleep(0.12)
+            try: s.recv(256)
+            except Exception: pass
+
+            s.sendall(b"\x0700NLD20\r")
+            time.sleep(0.12)
+            try: s.recv(256)
+            except Exception: pass
+
+            s.close()
+            hub_log(f"✅ [🟢 LED ACTIVATED] Ambi Climate ({ip}) front LED is now SOLID GREEN!")
+            return True
+        except Exception as e:
+            hub_log(f"[-] Error setting LED to Green on {ip}: {e}")
+            return False
 
 def run_beacon_listener():
     """Listens for AMX Beacon on UDP 9131 to auto-detect Ambi IP."""
@@ -733,7 +793,10 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 </button>
             </div>
             <div id="cloudActionOutput" style="font-size: 11px; color: #94a3b8; margin-top: 8px; font-family: monospace;"></div>
-            <div style="margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px;">
+            <div style="margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn-action" style="width: 100%; background: #10b981; font-size: 13px; font-weight: 700; padding: 10px;" onclick="setLedGreen()">
+                    🟢 สั่งไฟหน้าเครื่องเป็นสีเขียว (Solid Green)
+                </button>
                 <button class="btn-action" style="width: 100%; background: #4f46e5; font-size: 12px; padding: 9px;" onclick="viewSystemLog()">
                     📋 ดึงดู System Dump Log ของ Ambi (NSL)
                 </button>
@@ -937,6 +1000,21 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
             } catch (e) {
                 box.innerText = 'เกิดข้อผิดพลาดในการดึง Log: ' + e;
                 showToast('❌ ไม่สามารถดึง System Log ได้');
+            }
+        }
+
+        async function setLedGreen() {
+            showToast('🟢 กำลังส่งคำสั่งไฟสีเขียวไปที่ Ambi...');
+            try {
+                const res = await fetch('/api/led/green');
+                const json = await res.json();
+                if (json.status === 'OK') {
+                    showToast('✅ สั่งไฟหน้าเครื่องเป็นสีเขียวแล้ว!');
+                } else {
+                    showToast('❌ ยังไม่ได้ IP หรือส่งคำสั่งไม่สำเร็จ');
+                }
+            } catch (e) {
+                showToast('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ');
             }
         }
 
@@ -1222,7 +1300,16 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(log_text.encode('utf-8'))
             return
 
-        # 9. Serve HTML Dashboard
+        # 9. Set LED Green API
+        if path == '/api/led/green':
+            ok = set_ambi_led_green()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "device_ip": get_ambi_ip()}).encode('utf-8'))
+            return
+
+        # 10. Serve HTML Dashboard
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.end_headers()
@@ -1372,6 +1459,8 @@ def run_dns():
                     hub_log(f"   Device IP      : {client_ip}")
                     hub_log(f"   -> Locked Ambi IP into memory: {AMBI_IP}")
                     hub_log(f"{'='*70}\n")
+                    # Turn Green LED immediately upon acquiring Ambi IP!
+                    threading.Thread(target=set_ambi_led_green, args=(client_ip,), daemon=True).start()
 
                 # Send DNS redirect to HOST_IP immediately so Ambi connects to Local Hub
                 resp = make_dns_redirect_response(data, HOST_IP)
@@ -1379,9 +1468,10 @@ def run_dns():
                     hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {HOST_IP}")
                     sock.sendto(resp, addr)
 
-                # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP
+                # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP & maintain Green LED
                 def auto_set_cloud_worker(target_ip):
-                    time.sleep(1.2)  # Allow DNS response to complete
+                    time.sleep(0.6)  # Allow DNS response to complete
+                    set_ambi_led_green(target_ip)  # Ensure Solid Green
                     hub_log(f"\n{'='*70}")
                     hub_log(f"🚀 [STEP 2: AUTO-SET CLOUD SERVER TO LOCAL IP]")
                     hub_log(f"   Target Ambi IP : {target_ip}")
@@ -1391,6 +1481,8 @@ def run_dns():
                     hub_log(f"✅ Cloud URL configured on Ambi ({target_ip})!")
                     hub_log(f"   NCE Status: {res.get('response_ce')} | NCD Status: {res.get('response_cd')}")
                     hub_log(f"   Ambi will now reconnect to local server on port 8867.\n")
+                    time.sleep(0.5)
+                    set_ambi_led_green(target_ip)  # Re-affirm Green after NCD
                     AMBI_READY_EVENT.set()
 
                 if not AMBI_AUTO_RETARGETED:
@@ -1644,6 +1736,7 @@ if __name__ == '__main__':
         print(f"     [3] ยิงเปลี่ยน Cloud มาที่เครื่องนี้ TCP -> {HOST_IP}:8866 (NCE + NCD)")
         print("     [4] สั่ง Ambi Reconnect (NCD)")
         print("     [5] อ่านค่าเซนเซอร์สด (NTP / NHM)")
+        print("     [6] สั่งไฟ LED หน้าเครื่องเป็นสีเขียว (Solid Green)")
         print("     [L] ดึงและแสดง System Dump Log ของ Ambi (NSL)")
         print("     [R] Reset คืนค่า Cloud ฮ่องกง (connect.smartambi.com:8867)")
         print("=" * 65 + "\n")
@@ -1682,6 +1775,11 @@ if __name__ == '__main__':
                         t_str = t.decode('latin1', errors='ignore').strip() if t else "None"
                         h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
                         print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
+                elif cmd in ("6", "G"):
+                    if not get_ambi_ip():
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        set_ambi_led_green()
                 elif cmd == "L":
                     print(f"\n[*] Fetching Ambi System Dump Log (NSL) from {get_ambi_ip()}...")
                     log_content = fetch_ambi_system_log()
