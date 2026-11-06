@@ -18,7 +18,7 @@ from daikin_ir import build_daikin_command, frames_to_sendir
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 IP_CACHE_FILE = os.path.join(DIR, "ambi_ip.txt")
-FALLBACK_IP = "192.168.1.163"
+FALLBACK_IP = "192.168.1.156"
 AMBI_IP = FALLBACK_IP
 AMBI_PORT = 4998
 
@@ -100,7 +100,7 @@ def discover_ambi_ip():
             pass
 
     # 3. Check known recent IP candidates
-    for candidate in ["192.168.1.163", "192.168.1.152", "192.168.1.151", "192.168.1.121", "192.168.1.181"]:
+    for candidate in ["192.168.1.156", "192.168.1.163", "192.168.1.152", "192.168.1.151", "192.168.1.121", "192.168.1.181"]:
         if is_valid_ambi(candidate, timeout=0.5):
             save_ambi_ip(candidate)
             return candidate
