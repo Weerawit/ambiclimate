@@ -534,6 +534,49 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
   3. กดปุ่มสีเขียว `🟢 สั่งไฟหน้าเครื่องเป็นสีเขียว (Solid Green)` บน Web Dashboard
 * **ผลการทดสอบจริง:** ยิงคำสั่งสำเร็จ 100% ตัวเครื่องตอบรับและไฟหน้าเครื่องเปลี่ยนเป็น **สีเขียวนิ่ง (Solid Green)** เรียบร้อย!
 
+---
+
+## 26. การวิเคราะห์ความคงอยู่ (Persistence) ของ Cloud IP และเหตุผลที่เครื่องยังต่อ smartambi
+
+### 1. การเปลี่ยน Cloud IP จะ Permanent (ถาวร) หรือไม่?
+* **คำตอบ: ไม่ถาวรในระดับฮาร์ดแวร์ (Non-Persistent Across Reboot)**
+* **เหตุผลทางสถาปัตยกรรม:**
+  1. ตัวเครื่อง Ambi Climate รันระบบปฏิบัติการ Linux OpenWrt บนชิป MIPS โดยมี Flash ROM แบบ Read-Only (`SquashFS`) สำหรับไฟล์ระบบหลัก
+  2. โดเมนหลักสำหรับเชื่อมต่อคลาวด์ (`connect.smartambi.com` และ `connect.ambiclimate.com`) เป็นค่า **Factory Hardcoded Defaults** ภายในไบนารี `aircom`
+  3. คำสั่งผ่านพอร์ต 8070 (เช่น `NCA`, `NCE`, `NCD`) เป็นการปรับแต่งค่าใน **RAM Runtime Memory** ของโพรเซส `aircom` เท่านั้น
+  4. เมื่อเครื่อง Ambi ถูกดึงปลั๊กไฟออก หรือรีบูต ค่าคอนฟิกใน RAM จะถูกรีเซ็ตกลับเป็น Factory Defaults ทันที
+
+### 2. ทำไมเมื่อส่งคำสั่งเปลี่ยน Cloud แล้ว ตัวเครื่องยังพยายามวิ่งไปหา `connect.smartambi.com`?
+จากการวิเคราะห์เชิงลึกผ่าน System Log Dump (`ambi_system_dump.log`) พบข้อเท็จจริงสำคัญ 3 ประการ:
+1. **คำสั่ง `NCE` ถูก Reject ด้วย Error Code 2 (Invalid Parameter):**
+   * บันทึกใน Syslog:
+     ```text
+     aircom[813]: devparse: 01NCE192.168.1.138:8867
+     aircom[813]: devparse: command type CE -> devs: Cloud Envrionment
+     aircom[813]: devcmdres: Error (status 2: Invalid Parameter)
+     ```
+   * ตัวเครื่องตอบกลับมาว่า `\x07012NCE` โดยเลข `2` คือรหัสข้อผิดพลาด เพราะคำสั่ง `NCE` ย่อมาจาก **Cloud Environment** (รับค่า Environment เช่น dev/staging/prod หรือโหมดตัวเลข) ไม่ได้สร้างมาสำหรับรับ IP Address
+   * คำสั่งที่ใช้สำหรับ Override Server Address จริงๆ ตามโค้ด `aircom` คือ **`NCA` (Cloud Server Address Override)**
+   * ผลลัพธ์: การส่ง `NCE192.168.1.138:8867` จึงไม่ถูกนำไปบันทึกเป็นที่อยู่เซิร์ฟเวอร์
+2. **การส่ง `NCD` บังคับให้ `aircom` Reconnect กลับไปหา Factory Domain:**
+   * เมื่อค่า Server Address ใหม่ไม่ถูกตั้งค่า พอคำสั่ง `NCD` ถูกส่งไป โพรเซส `aircom` จึงตัดการเชื่อมต่อเดิมแล้วเปิด Socket เชื่อมต่อไปยัง Default Server ทันที:
+     ```text
+     aircom[813]: cloudc: cloud client open socket to server connect.smartambi.com:8867
+     aircom[813]: sockGen: gethostbyname connect.smartambi.com
+     ```
+3. **ระบบป้องกัน DNS-Rebind Attack ของตัวเครื่อง (`dnsmasq`):**
+   * ในตัว Ambi รัน `dnsmasq` ซึ่งเปิดออปชัน `--stop-dns-rebind` ไว้
+   * เมื่อ Fake DNS ส่ง IP วง Local (`192.168.1.138`) กลับไปเป็นคำตอบของโดเมนสาธารณะ `dnsmasq` ของ Ambi จะทิ้งคำตอบนั้นเป็นบางครั้ง
+
+### 3. สถาปัตยกรรม Local Hub ถาวร 100% (Permanent Bulletproof Architecture):
+* ด้วยเหตุนี้ เราจึง**ไม่จำเป็นต้องและไม่ควรแก้ไข Flash ROM ของ Ambi** (เพื่อป้องกันความเสี่ยงฮาร์ดแวร์เสียหาย)
+* แต่ใช้สถาปัตยกรรม **Auto-Catch & Auto-Restore แบบอัตโนมัติบน Local Hub**:
+  1. **DNS Interception (Port 53):** ดักจับชื่อโดเมน `connect.*` ทันทีที่ Ambi เปิดเครื่อง
+  2. **Instant Green LED Activation:** ทันทีที่ล็อก IP Ambi ได้ Hub จะยิงชุดคำสั่งหยุดไฟส้มและเปิดไฟเขียวนิ่ง (Solid Green) อัตโนมัติในระดับมิลลิวินาที
+  3. **Mock Cloud Listener (Port 8866 & 8867):** รองรับแพ็กเก็ต Push จากตัวเครื่อง
+  4. **IR Appliance Controller (Port 4998):** ควบคุมแอร์ Daikin ได้ตลอดเวลาแบบ 100% Offline
+* **สรุป:** ไม่ว่าผู้ใช้จะถอดปลั๊ก ย้ายห้อง หรือไฟดับ เมื่อเสียบปลั๊ก Ambi ใหม่ Ambi จะถูก Local Hub ปรับเป็นไฟเขียวและพร้อมใช้งานได้ทันทีโดยไม่ต้องตั้งค่าใดๆ เพิ่มเติมทั้งสิ้น
+
 
 
 

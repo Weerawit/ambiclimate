@@ -90,7 +90,7 @@ def get_cloud_server_setting(target_ip=None):
     return "Unknown / No response"
 
 def change_cloud_server(new_server_port, target_ip=None):
-    """Sends NCE to change server and NCD to force reconnect."""
+    """Sends NCA (Address Override), NCE (Environment), and NCD to force reconnect."""
     ip = target_ip or get_ambi_ip()
     if not ip:
         hub_log("[-] Cannot change cloud server: Ambi IP not yet acquired.")
@@ -102,23 +102,29 @@ def change_cloud_server(new_server_port, target_ip=None):
 
     # 1. Query current
     curr = get_cloud_server_setting(ip)
-    hub_log(f"   1) Current Cloud Setting (NCA) : '{curr}'")
+    hub_log(f"   1) Current Cloud Setting (NCA)     : '{curr}'")
 
-    # 2. Send NCE
+    # 2. Send NCA (Cloud Server Address Override)
+    resp_ca = send_ambi_cmd(f"NCA{new_server_port}", ip)
+    ca_decoded = resp_ca.decode('latin1', errors='ignore').strip() if resp_ca else "None"
+    hub_log(f"   2) Sent NCA (Address Override) ->  : '{ca_decoded}'")
+
+    # 3. Send NCE (Cloud Environment)
     resp_ce = send_ambi_cmd(f"NCE{new_server_port}", ip)
     ce_decoded = resp_ce.decode('latin1', errors='ignore').strip() if resp_ce else "None"
-    hub_log(f"   2) Sent NCE -> Response         : '{ce_decoded}'")
+    hub_log(f"   3) Sent NCE (Environment)      ->  : '{ce_decoded}'")
 
-    # 3. Send NCD
+    # 4. Send NCD (Cloud Reconnect)
     resp_cd = send_ambi_cmd("NCD", ip)
     cd_decoded = resp_cd.decode('latin1', errors='ignore').strip() if resp_cd else "None"
-    hub_log(f"   3) Sent NCD -> Response         : '{cd_decoded}'")
-    hub_log(f"✅ Cloud Server re-target sent! Ambi should now connect to {new_server_port}\n")
+    hub_log(f"   4) Sent NCD (Reconnect)        ->  : '{cd_decoded}'")
+    hub_log(f"✅ Cloud Server re-target sent! Target: {new_server_port}\n")
     return {
         "status": "OK",
         "device_ip": ip,
         "previous_server": curr,
         "new_server": new_server_port,
+        "response_ca": ca_decoded,
         "response_ce": ce_decoded,
         "response_cd": cd_decoded
     }
@@ -1797,14 +1803,16 @@ if __name__ == '__main__':
                         res_str = res.decode('latin1', errors='ignore').strip() if res else "None"
                         print(f"\n[INFO] Sent NCD -> {res_str}\n")
                 elif cmd == "5":
-                    if not get_ambi_ip():
+                    target = get_ambi_ip() or get_cached_ambi_ip()
+                    if not target:
                         print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
                     else:
-                        t = send_ambi_cmd("NTP")
-                        h = send_ambi_cmd("NHM")
-                        t_str = t.decode('latin1', errors='ignore').strip() if t else "None"
-                        h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
-                        print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
+                        print(f"\n[*] Querying live sensors from {target}:8070...")
+                        from test_daikin import get_live_sensors
+                        live = get_live_sensors(target, port=8070, timeout=3.5)
+                        t_val = f"{live['temperature']} °C" if live.get('temperature') is not None else "None"
+                        h_val = f"{live['humidity']} %" if live.get('humidity') is not None else "None"
+                        print(f"[INFO] Sensors -> Temp: {t_val} | Hum: {h_val}\n")
                 elif cmd in ("6", "G"):
                     target = get_ambi_ip() or get_cached_ambi_ip()
                     print(f"\n[*] Sending Green LED command to Ambi ({target})...")
