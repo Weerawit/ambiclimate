@@ -343,6 +343,8 @@ def calculate_humidex(temp_c, humidity_rh):
     v = 6.112 * (10 ** ((7.5 * T) / (237.7 + T))) * (RH / 100.0)
     Humidex = T + (5.0 / 9.0) * (v - 10.0)
     """
+    if temp_c is None or humidity_rh is None:
+        return None
     try:
         t = float(temp_c)
         rh = float(humidity_rh)
@@ -350,14 +352,30 @@ def calculate_humidex(temp_c, humidity_rh):
         humidex = t + (5.0 / 9.0) * (v - 10.0)
         return round(humidex, 1)
     except Exception:
-        return round(float(temp_c), 1)
+        try:
+            return round(float(temp_c), 1)
+        except Exception:
+            return None
 
 def evaluate_comfort(temp_c, humidity_rh, user_offset=None):
     if user_offset is None:
         user_offset = COMFORT_PROFILE.get("user_offset", 0.0)
-    humidex = calculate_humidex(temp_c, humidity_rh)
     base_target = COMFORT_PROFILE.get("target_base_humidex", 26.0)
     target = base_target + user_offset
+
+    if temp_c is None or humidity_rh is None:
+        return {
+            "humidex": None,
+            "target_humidex": round(target, 1),
+            "score": 0.0,
+            "label": "รอข้อมูล Push จาก Ambi...",
+            "status_key": "waiting",
+            "badge_color": "#64748b"
+        }
+
+    humidex = calculate_humidex(temp_c, humidity_rh)
+    if humidex is None:
+        humidex = round(float(temp_c), 1) if temp_c is not None else 25.0
     diff = humidex - target
     score = round(diff / 1.5, 1)
     score = max(-3.0, min(3.0, score))
@@ -1143,8 +1161,8 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
 
         # 1. State API
         if path == '/api/state':
-            room_t = AC_STATE.get("room_temp", 25.0)
-            room_rh = AC_STATE.get("room_humidity", 50.0)
+            room_t = AC_STATE.get("room_temp")
+            room_rh = AC_STATE.get("room_humidity")
             comfort = evaluate_comfort(room_t, room_rh)
 
             now = time.time()
@@ -1221,9 +1239,9 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                 save_comfort_profile(COMFORT_PROFILE)
 
             elif choice == 'comfy':
-                room_t = AC_STATE.get("room_temp", 25.0)
-                room_rh = AC_STATE.get("room_humidity", 50.0)
-                curr_hx = calculate_humidex(room_t, room_rh)
+                room_t = AC_STATE.get("room_temp") or 25.0
+                room_rh = AC_STATE.get("room_humidity") or 50.0
+                curr_hx = calculate_humidex(room_t, room_rh) or 26.0
                 base = COMFORT_PROFILE.get("target_base_humidex", 26.0)
                 new_offset = round(curr_hx - base, 2)
                 COMFORT_PROFILE["user_offset"] = new_offset
