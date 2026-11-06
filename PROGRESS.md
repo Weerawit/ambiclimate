@@ -445,7 +445,16 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 
 ## 21. พัฒนาระบบ Hybrid Local Comfort AI (Auto-Tuning แอร์ Daikin) สำเร็จครบทุกเฟส
 
-ตามที่ผู้ใช้ได้อนุมัติแผนงาน [hybrid_comfort_ai_plan.md](file:///C:/Users/maneepon/.gemini/antigravity/brain/0470c9b8-2482-4148-83e6-fb62b2440bea/hybrid_comfort_ai_plan.md) เราได้ทำการพัฒนาและผนวกระบบ Local AI เข้าสู่ [ambi_hub.py](file:///c:/Users/maneepon/Documents/Projects/Ambi%20Climate/ambi_hub.py) สำเร็จครบถ้วน 4 เฟส:
+ตามที่ผู้ใช้ได้อนุมัติแผนงาน [hybrid_comfort_ai_plan.md](file:///C:/Users/maneepon/.gemini/antigravity/brain/0470c9b8-2482-4148-83e6-fb62b2440bea/hybrid_comfort_ai_plan.md) เราได้ทำการพัฒนาและผนวกระบบ Local AI เข้าสู่ [ambi_hub.py](file:///c:/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/ambi_hub.py) สำเร็จครบถ้วน 4 เฟส
+
+---
+
+## 22. ย้ายพื้นที่พัฒนาหลักสู่โฟลเดอร์ Git Repository: `ambiclimate/` (จดบันทึกเป็นกฎถาวร)
+
+* **กฎสำคัญ (Project Rule):** **นับจากนี้เป็นต้นไป การพัฒนา แก้ไข ทดสอบ และ Commit โค้ดทั้งหมดจะกระทำภายในโฟลเดอร์ [`ambiclimate/`](file:///c:/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate) นี้เท่านั้น**
+* **Repository:** `https://github.com/Weerawit/ambiclimate.git`
+* **โครงสร้าง:** แยกไฟล์ Source Code, Dockerfile, และ CI/CD ออกจากไฟล์ขยะ/APK ดิบขนาด 240MB ในโฟลเดอร์วิจัยภายนอก เพื่อให้ Git มีขนาดเบาและรองรับ Auto Deploy ได้อย่างสมบูรณ์แบบ
+:
 
 ### 1. Phase 1: สมองคำนวณสภาวะความสบายสด (Canadian Humidex Engine)
 * **สูตรฟิสิกส์ Humidex:** คำนวณความรู้สึกจริง (Feels-Like Temperature) จากอุณหภูมิห้อง $T$ และความชื้นสัมพัทธ์ $RH$:
