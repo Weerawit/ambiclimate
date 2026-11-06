@@ -166,6 +166,18 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
             hub_log(f"[-] Error fetching system log from {ip}: {e}")
             return f"Error connecting to Ambi on {ip}:8070 -> {e}"
 
+def get_cached_ambi_ip():
+    cache_file = os.path.join(DIR, "ambi_ip.txt")
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                ip = f.read().strip()
+                if ip.startswith("192.168."):
+                    return ip
+        except Exception:
+            pass
+    return "192.168.1.156"
+
 def set_ambi_led_green(target_ip=None, brightness=5730):
     """
     Directly sets Ambi Climate hardware LED to SOLID GREEN:
@@ -173,7 +185,7 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
     2. Sends NLL1 (Enable brightness PWM)
     3. Sets RGB: Red=0 (NLD00), Green=9 (NLD19), Blue=0 (NLD20)
     """
-    ip = target_ip or get_ambi_ip()
+    ip = target_ip or get_ambi_ip() or get_cached_ambi_ip()
     if not ip:
         hub_log("[-] Cannot set LED: Ambi IP not yet acquired.")
         return False
@@ -1776,10 +1788,9 @@ if __name__ == '__main__':
                         h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
                         print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
                 elif cmd in ("6", "G"):
-                    if not get_ambi_ip():
-                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
-                    else:
-                        set_ambi_led_green()
+                    target = get_ambi_ip() or get_cached_ambi_ip()
+                    print(f"\n[*] Sending Green LED command to Ambi ({target})...")
+                    set_ambi_led_green(target)
                 elif cmd == "L":
                     print(f"\n[*] Fetching Ambi System Dump Log (NSL) from {get_ambi_ip()}...")
                     log_content = fetch_ambi_system_log()
