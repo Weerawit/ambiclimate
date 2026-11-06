@@ -28,9 +28,16 @@ CERT_FILE = os.path.join(DIR, "server_cert.pem")
 KEY_FILE = os.path.join(DIR, "server_key.pem")
 PROFILE_FILE = os.path.join(DIR, "decompiled_analysis", "user_device_profile.json")
 
-from test_daikin import get_ambi_ip, save_ambi_ip, is_valid_ambi
+from test_daikin import save_ambi_ip, is_valid_ambi
 
-AMBI_IP = get_ambi_ip()
+# In-Memory Ambi IP State (Requirement 1: Locked strictly upon connect query)
+AMBI_IP = None
+AMBI_READY_EVENT = threading.Event()
+AMBI_AUTO_RETARGETED = False
+
+def get_ambi_ip():
+    global AMBI_IP
+    return AMBI_IP
 
 def update_ambi_ip(new_ip, source=""):
     global AMBI_IP
@@ -186,20 +193,20 @@ MAC_ADDRESS = DEVICE["ZMAC_ADDRESS"]
 IRP_ID = APPLIANCE["ZIRP_ID"]
 
 AC_STATE = {
-    "power": "On",
+    "power": "Off",  # Requirement 3: System will not auto-tune until AC is explicitly turned ON
     "mode": "Cool",
     "temperature": 24,
-    "fan": "High",
+    "fan": "Auto",
     "swing": "Auto",
     "last_seen": None,
-    "room_temp": 28.89,
-    "room_humidity": 49.73,
+    "room_temp": None,
+    "room_humidity": None,
     "luminosity": None,
-    "humidex": 34.3,
+    "humidex": None,
     "comfort_score": 0.0,
-    "comfort_label": "กำลังคำนวณ...",
-    "comfort_badge_color": "#059669",
-    "sensor_status": "Live Hardware (Port 8070)",
+    "comfort_label": "รอตรวจวัดสภาวะห้อง...",
+    "comfort_badge_color": "#64748b",
+    "sensor_status": "Waiting for Ambi connect.* query...",
     "sensor_time": None
 }
 
@@ -383,7 +390,13 @@ def auto_tuning_worker():
             time.sleep(30)
             if not COMFORT_PROFILE.get("auto_tune_enabled", True):
                 continue
-            if str(AC_STATE.get("power", "On")).lower() == "off":
+
+            # Requirement 3: MUST wait until AC is explicitly turned ON before auto-tuning!
+            power_status = str(AC_STATE.get("power", "Off")).lower()
+            if power_status != "on":
+                continue
+
+            if not AMBI_READY_EVENT.is_set():
                 continue
 
             room_t = AC_STATE.get("room_temp")
@@ -458,10 +471,19 @@ def auto_tuning_worker():
 
 def poll_live_sensors():
     """Periodically queries Port 8070 on Ambi Climate to retrieve real-time live sensor data."""
-    from test_daikin import get_live_sensors, get_ambi_ip
+    from test_daikin import get_live_sensors
     while True:
         try:
+            if not AMBI_READY_EVENT.is_set():
+                AC_STATE["sensor_status"] = "Waiting for Ambi connect.* DNS query..."
+                time.sleep(2)
+                continue
+
             target_ip = get_ambi_ip()
+            if not target_ip:
+                time.sleep(2)
+                continue
+
             live = get_live_sensors(target_ip, port=8070, timeout=3.0)
             if live.get("temperature") is not None:
                 AC_STATE["room_temp"] = live["temperature"]
@@ -730,23 +752,28 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 document.getElementById('comfortLabel').innerText = data.comfort.label;
                 document.getElementById('comfortScore').innerText = 'Comfort Index: ' + (data.comfort.score > 0 ? '+' : '') + data.comfort.score + ' | เป้าหมาย: ' + data.comfort.target_humidex + '°C';
 
-                // 3. Auto-Tune & Cooldown
+                // 3. Auto-Tune & Cooldown (Requirement 3: Wait until AC is turned ON)
                 document.getElementById('autotuneToggle').checked = data.profile.auto_tune_enabled;
                 const cdSec = data.cooldown_remaining_sec;
                 const cdText = document.getElementById('cooldownText');
-                if (data.profile.auto_tune_enabled) {
+                const isACOn = (data.ac_state.power && data.ac_state.power.toLowerCase() === 'on');
+
+                if (!data.profile.auto_tune_enabled) {
+                    cdText.innerText = '⚪ ปิดใช้งาน Auto-Tuning';
+                    cdText.style.color = '#94a3b8';
+                } else if (!isACOn) {
+                    cdText.innerText = '⏸️ แอร์ยังปิดอยู่ (รอเปิดแอร์ก่อนเริ่ม Auto-Tuning)';
+                    cdText.style.color = '#f59e0b';
+                } else {
                     if (cdSec > 0) {
                         const m = Math.floor(cdSec / 60);
                         const s = cdSec % 60;
                         cdText.innerText = '⏳ พักรออุณหภูมิกระจาย (อีก ' + (m > 0 ? m + ' น. ' : '') + s + ' วิ)';
                         cdText.style.color = '#fbbf24';
                     } else {
-                        cdText.innerText = '🟢 พร้อมปรับอัตโนมัติ (ตรวจเช็คทุก 30 วินาที)';
+                        cdText.innerText = '🟢 พร้อมปรับอัตโนมัติ (แอร์เปิดอยู่ - ตรวจเช็คทุก 30 วินาที)';
                         cdText.style.color = '#34d399';
                     }
-                } else {
-                    cdText.innerText = '⚪ ปิดใช้งาน Auto-Tuning';
-                    cdText.style.color = '#94a3b8';
                 }
 
                 document.getElementById('offsetDesc').innerText = 'ค่าชดเชยส่วนบุคคล: ' + (data.profile.user_offset > 0 ? '+' : '') + data.profile.user_offset + '°C | เป้าหมาย Humidex: ' + data.comfort.target_humidex + '°C';
@@ -1274,24 +1301,60 @@ def run_dns():
         try:
             data, addr = sock.recvfrom(2048)
             client_ip = addr[0]
-            ambi_current = get_ambi_ip()
-            is_from_ambi = (client_ip == ambi_current)
 
             domain, qtype = parse_dns_domain(data)
             if not domain:
                 continue
 
+            # Requirement 1: Check for Ambi connect query (e.g. connect.smartambi.com, connect.ambiclimate.com)
+            is_connect_query = ("connect." in domain) and any(x in domain for x in ("smartambi.com", "ambiclimate.com", "tryambi.com"))
+
+            if is_connect_query and client_ip not in (HOST_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
+                global AMBI_IP, AMBI_AUTO_RETARGETED
+                if AMBI_IP != client_ip:
+                    AMBI_IP = client_ip
+                    save_ambi_ip(client_ip)
+                    hub_log(f"\n{'='*70}")
+                    hub_log(f"🎯 [STEP 1: CAPTURED AMBI IP FROM DNS]")
+                    hub_log(f"   Received Query : '{domain}' (qtype={qtype})")
+                    hub_log(f"   Device IP      : {client_ip}")
+                    hub_log(f"   -> Locked Ambi IP into memory: {AMBI_IP}")
+                    hub_log(f"{'='*70}\n")
+
+                # Send DNS redirect to ROUTER_WAN_IP immediately
+                resp = make_dns_redirect_response(data, ROUTER_WAN_IP)
+                if resp:
+                    hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {ROUTER_WAN_IP}")
+                    sock.sendto(resp, addr)
+
+                # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP
+                def auto_set_cloud_worker(target_ip):
+                    time.sleep(1.2)  # Allow DNS response to complete
+                    hub_log(f"\n{'='*70}")
+                    hub_log(f"🚀 [STEP 2: AUTO-SET CLOUD SERVER TO LOCAL IP]")
+                    hub_log(f"   Target Ambi IP : {target_ip}")
+                    hub_log(f"   Target Server  : {HOST_IP}:8867")
+                    hub_log(f"{'='*70}")
+                    res = change_cloud_server(f"{HOST_IP}:8867", target_ip=target_ip)
+                    hub_log(f"✅ Cloud URL configured on Ambi ({target_ip})!")
+                    hub_log(f"   NCE Status: {res.get('response_ce')} | NCD Status: {res.get('response_cd')}")
+                    hub_log(f"   Ambi will now reconnect to local server on port 8867.\n")
+                    AMBI_READY_EVENT.set()
+
+                if not AMBI_AUTO_RETARGETED:
+                    AMBI_AUTO_RETARGETED = True
+                    threading.Thread(target=auto_set_cloud_worker, args=(client_ip,), daemon=True).start()
+                continue
+
+            # Check if query is from the locked Ambi IP
+            ambi_current = get_ambi_ip()
+            is_from_ambi = (client_ip == ambi_current and ambi_current is not None)
+
             # Check domain types
             is_ambi_exclusive = any(domain.endswith(t) for t in AMBI_SPECIFIC_DOMAINS)
             is_ambi_shared = any(domain.endswith(t) for t in AMBI_SHARED_DOMAINS)
 
-            # Case 1: Unregistered IP querying an Ambi-exclusive domain (e.g. smartambi.com)
-            if not is_from_ambi and is_ambi_exclusive and client_ip not in (HOST_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
-                update_ambi_ip(client_ip, source=f"DNS Exclusive Domain '{domain}'")
-                ambi_current = client_ip
-                is_from_ambi = True
-
-            # Case 2: Query comes from Ambi Climate device ONLY
+            # Case A: Query comes from Ambi Climate device ONLY
             if is_from_ambi:
                 if is_ambi_exclusive or is_ambi_shared:
                     resp = make_dns_redirect_response(data, ROUTER_WAN_IP)
@@ -1303,7 +1366,7 @@ def run_dns():
                     hub_log(f"[DNS FORWARD 🌐] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> Forwarded to 8.8.8.8")
                     forward_dns_upstream(sock, data, addr)
 
-            # Case 3: Query is from OTHER machines in the network (PC, Phone, Smart TV)
+            # Case B: Query is from OTHER machines in the network (PC, Phone, Smart TV)
             else:
                 # Silently forward to 8.8.8.8 without logging, intercepting, or polluting Ambi state
                 forward_dns_upstream(sock, data, addr)
