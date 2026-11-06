@@ -16,6 +16,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 import math
+import select
 from urllib.parse import urlparse, parse_qs
 
 HOST_IP = "192.168.1.138"
@@ -100,6 +101,44 @@ def change_cloud_server(new_server_port, target_ip=None):
         "response_ce": ce_decoded,
         "response_cd": cd_decoded
     }
+
+def fetch_ambi_system_log(target_ip=None, timeout=3.5):
+    """Retrieves full internal system log from Ambi Climate using NSL command."""
+    ip = target_ip or get_ambi_ip()
+    hub_log(f"[*] Fetching Ambi System Log from {ip}:8070 (NSL)...")
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect((ip, 8070))
+        s.sendall(b"\x0701NSL\r")
+        chunks = []
+        while True:
+            try:
+                data = s.recv(4096)
+                if not data:
+                    break
+                chunks.append(data)
+                time.sleep(0.15)
+                r, _, _ = select.select([s], [], [], 0.3)
+                if not r:
+                    break
+            except socket.timeout:
+                break
+        s.close()
+        raw = b"".join(chunks)
+        if raw:
+            text = raw.decode("utf-8", errors="replace")
+            log_file = os.path.join(DIR, "ambi_system_dump.log")
+            with open(log_file, "wb") as f:
+                f.write(raw)
+            hub_log(f"[+] Received {len(raw)} bytes of Ambi System Log -> Saved to {log_file}")
+            return text
+        else:
+            hub_log("[-] No log data returned from device.")
+            return "No log data returned from device."
+    except Exception as e:
+        hub_log(f"[-] Error fetching system log from {ip}: {e}")
+        return f"Error connecting to Ambi on {ip}:8070 -> {e}"
 
 def run_beacon_listener():
     """Listens for AMX Beacon on UDP 9131 to auto-detect Ambi IP."""
@@ -651,6 +690,12 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 </button>
             </div>
             <div id="cloudActionOutput" style="font-size: 11px; color: #94a3b8; margin-top: 8px; font-family: monospace;"></div>
+            <div style="margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px;">
+                <button class="btn-action" style="width: 100%; background: #4f46e5; font-size: 12px; padding: 9px;" onclick="viewSystemLog()">
+                    📋 ดึงดู System Dump Log ของ Ambi (NSL)
+                </button>
+                <pre id="syslogModal" style="display: none; background: #090d16; padding: 12px; border-radius: 8px; max-height: 250px; overflow-y: auto; font-size: 11px; color: #38bdf8; margin-top: 8px; border: 1px solid #1e293b; white-space: pre-wrap; font-family: monospace;"></pre>
+            </div>
         </div>
     </div>
 
@@ -828,6 +873,22 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 document.getElementById('cloudActionOutput').innerText = 'ผลลัพธ์ NCD: ' + json.response;
             } catch (e) {
                 showToast('❌ ไม่สามารถส่ง NCD ได้');
+            }
+        }
+
+        async function viewSystemLog() {
+            showToast('⏳ กำลังดึง System Dump Log จาก Ambi...');
+            const box = document.getElementById('syslogModal');
+            box.style.display = 'block';
+            box.innerText = 'กำลังส่งคำสั่ง NSL ไปที่ Ambi:8070... กรุณารอสักครู่';
+            try {
+                const res = await fetch('/api/system_log');
+                const text = await res.text();
+                box.innerText = text || 'ไม่มีข้อมูล Log ตอบกลับมา';
+                showToast('✅ ดึง System Dump Log สำเร็จ');
+            } catch (e) {
+                box.innerText = 'เกิดข้อผิดพลาดในการดึง Log: ' + e;
+                showToast('❌ ไม่สามารถดึง System Log ได้');
             }
         }
 
@@ -1073,7 +1134,16 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK", "device_ip": get_ambi_ip(), "response": res_str}).encode('utf-8'))
             return
 
-        # 8. Serve HTML Dashboard
+        # 8. Ambi System Dump Log API (NSL)
+        if path == '/api/system_log':
+            log_text = fetch_ambi_system_log()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(log_text.encode('utf-8'))
+            return
+
+        # 9. Serve HTML Dashboard
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.end_headers()
@@ -1426,6 +1496,7 @@ if __name__ == '__main__':
         print(f"     [3] ยิงเปลี่ยน Cloud มาที่เครื่องนี้ TCP -> {HOST_IP}:8866 (NCE + NCD)")
         print("     [4] สั่ง Ambi Reconnect (NCD)")
         print("     [5] อ่านค่าเซนเซอร์สด (NTP / NHM)")
+        print("     [L] ดึงและแสดง System Dump Log ของ Ambi (NSL)")
         print("     [R] Reset คืนค่า Cloud ฮ่องกง (connect.smartambi.com:8867)")
         print("=" * 65 + "\n")
         while True:
@@ -1451,6 +1522,12 @@ if __name__ == '__main__':
                     t_str = t.decode('latin1', errors='ignore').strip() if t else "None"
                     h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
                     print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
+                elif cmd == "L":
+                    print("\n[*] Fetching Ambi System Dump Log (NSL)...")
+                    log_content = fetch_ambi_system_log()
+                    print("\n" + "=" * 70)
+                    print(log_content)
+                    print("=" * 70 + "\n")
                 elif cmd == "R":
                     change_cloud_server("connect.smartambi.com:8867")
             except Exception:
