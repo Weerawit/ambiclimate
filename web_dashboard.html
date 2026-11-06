@@ -828,8 +828,8 @@
                         เป้าหมายปัจจุบัน: <b id="currentCloudTarget" style="color: var(--ambi-teal);">กำลังตรวจสอบ...</b>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;">
-                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('192.168.1.138:8867')">ชี้มาเครื่องนี้ (:8867 TLS)</button>
-                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('192.168.1.138:8866')">ชี้มาเครื่องนี้ (:8866 TCP)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8867')">ชี้มาเครื่องนี้ (:8867 TLS)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8866')">ชี้มาเครื่องนี้ (:8866 TCP)</button>
                         <button class="btn-opt" style="font-size: 11px;" onclick="reconnectCloud()">⚡ สั่ง NCD ต่อใหม่</button>
                         <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('connect.smartambi.com:8867')">↩️ คืนค่า Cloud HK</button>
                     </div>
@@ -841,6 +841,36 @@
                         📋 ดึงดู System Dump Log ของ Ambi (NSL)
                     </button>
                     <pre id="syslogModal" style="display: none; background: #070c17; padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-size: 10px; color: #38bdf8; border: 1px solid var(--ambi-surface-border); white-space: pre-wrap; font-family: monospace;"></pre>
+                </div>
+
+                <!-- 5. Auto Network Configuration -->
+                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="control-label">🌐 การเชื่อมต่อเครือข่าย (Auto Detected)</span>
+                        <button class="btn-opt" style="padding: 4px 8px; font-size: 11px; flex: 0 0 auto;" onclick="detectNetworkNow()">🔄 Auto Detect</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ambi-surface-border); border-radius: 10px; padding: 10px; margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">Host LAN IP:</span>
+                            <b id="netHostIp" style="color: var(--ambi-teal);">--</b>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">Default Gateway:</span>
+                            <b id="netGatewayIp" style="color: #fff;">--</b>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">Router WAN IP:</span>
+                            <b id="netWanIp" style="color: #38bdf8;">--</b>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">DNS Redirect:</span>
+                            <b id="netDnsIp" style="color: #a78bfa;">--</b>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-dim);">Ambi Device IP:</span>
+                            <b id="netAmbiIp" style="color: #34d399;">--</b>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -963,7 +993,22 @@
                 document.getElementById('sensorDetailText').innerText = 
                     `${data.ac_state.sensor_status || 'Passive Push'} • อัปเดตล่าสุด: ${data.ac_state.sensor_time || '--'}`;
 
-                // 5. History List in Drawer
+                // 5. Network Information
+                if (data.network) {
+                    window.netHostIp = data.network.host_ip;
+                    const elHost = document.getElementById('netHostIp');
+                    if (elHost) elHost.innerText = data.network.host_ip || '--';
+                    const elGw = document.getElementById('netGatewayIp');
+                    if (elGw) elGw.innerText = data.network.gateway_ip || '--';
+                    const elWan = document.getElementById('netWanIp');
+                    if (elWan) elWan.innerText = data.network.wan_ip || '--';
+                    const elDns = document.getElementById('netDnsIp');
+                    if (elDns) elDns.innerText = data.network.dns_redirect_ip || '--';
+                    const elAmbi = document.getElementById('netAmbiIp');
+                    if (elAmbi) elAmbi.innerText = data.network.ambi_ip || 'Waiting for query...';
+                }
+
+                // 6. History List in Drawer
                 const hist = data.profile.history || [];
                 const histElem = document.getElementById('historyList');
                 if (hist.length > 0) {
@@ -1183,6 +1228,27 @@
             } catch (e) {
                 box.innerText = 'เกิดข้อผิดพลาด: ' + e;
                 showToast('❌ ดึง Log ล้มเหลว');
+            }
+        }
+
+        async function detectNetworkNow() {
+            showToast('🌐 กำลังตรวจจับ IP เครือข่ายอัตโนมัติ...');
+            try {
+                const res = await fetch('/api/network/detect', { method: 'POST' });
+                const json = await res.json();
+                if (json.status === 'OK' && json.network) {
+                    window.netHostIp = json.network.host_ip;
+                    document.getElementById('netHostIp').innerText = json.network.host_ip;
+                    document.getElementById('netGatewayIp').innerText = json.network.gateway_ip;
+                    document.getElementById('netWanIp').innerText = json.network.wan_ip;
+                    document.getElementById('netDnsIp').innerText = json.network.dns_redirect_ip;
+                    document.getElementById('netAmbiIp').innerText = json.network.ambi_ip || 'Waiting for query...';
+                    showToast(`✅ Host: ${json.network.host_ip} | WAN: ${json.network.wan_ip}`);
+                } else {
+                    showToast('❌ ไม่สามารถดึงข้อมูลเครือข่ายได้');
+                }
+            } catch (e) {
+                showToast('❌ เชื่อมต่อล้มเหลว');
             }
         }
 

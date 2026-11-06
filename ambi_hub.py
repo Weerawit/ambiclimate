@@ -13,17 +13,130 @@ import socket
 import ssl
 import struct
 import threading
+import subprocess
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 import math
 import select
 from urllib.parse import urlparse, parse_qs
 
-HOST_IP = "192.168.1.138"
-ROUTER_WAN_IP = "100.112.62.200"
-ROUTER_GATEWAY_IP = "192.168.1.1"
-# Use ROUTER_WAN_IP (CGNAT 100.64.0.0/10) so OpenWrt dnsmasq doesn't drop it via --stop-dns-rebind
-DNS_REDIRECT_IP = ROUTER_WAN_IP
+# -------------------------------------------------------------
+# AUTO-NETWORK DETECTION (Host IP, Default Gateway, Router WAN IP)
+# -------------------------------------------------------------
+def detect_local_ip(fallback="192.168.1.138"):
+    """Auto-detects the host's primary LAN IP address (across OS and Docker host mode)."""
+    env_ip = os.environ.get("HOST_IP")
+    if env_ip and env_ip.strip():
+        return env_ip.strip()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(1.0)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        if ip and ip != "127.0.0.1" and not ip.startswith("169.254."):
+            return ip
+    except Exception:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        if ip and ip != "127.0.0.1":
+            return ip
+    except Exception:
+        pass
+    return fallback
+
+def detect_gateway_ip(host_ip="192.168.1.138", fallback="192.168.1.1"):
+    """Auto-detects the default router gateway IP address."""
+    env_gw = os.environ.get("ROUTER_GATEWAY_IP")
+    if env_gw and env_gw.strip():
+        return env_gw.strip()
+
+    # 1. Linux /proc/net/route
+    if os.path.exists('/proc/net/route'):
+        try:
+            with open('/proc/net/route', 'r') as f:
+                for line in f.readlines()[1:]:
+                    parts = line.strip().split()
+                    if len(parts) >= 3 and parts[1] == '00000000':
+                        gw_hex = parts[2]
+                        gw_bytes = bytes.fromhex(gw_hex)
+                        gw_ip = socket.inet_ntoa(gw_bytes[::-1])
+                        if gw_ip and gw_ip != '0.0.0.0':
+                            return gw_ip
+        except Exception:
+            pass
+
+    # 2. Windows route print 0.0.0.0
+    if os.name == 'nt':
+        try:
+            res = subprocess.run(['route', 'print', '0.0.0.0'], capture_output=True, text=True, timeout=1.5)
+            for line in res.stdout.splitlines():
+                parts = line.strip().split()
+                if len(parts) >= 5 and parts[0] == '0.0.0.0':
+                    gw = parts[2]
+                    if re.match(r'^\d+\.\d+\.\d+\.\d+$', gw) and gw != '0.0.0.0':
+                        return gw
+        except Exception:
+            pass
+
+    # 3. Linux ip route
+    try:
+        res = subprocess.run(['ip', 'route'], capture_output=True, text=True, timeout=1.5)
+        m = re.search(r'default via (\d+\.\d+\.\d+\.\d+)', res.stdout)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+
+    # 4. Infer gateway from host IP subnet
+    if host_ip and '.' in host_ip:
+        return host_ip.rsplit('.', 1)[0] + '.1'
+    return fallback
+
+def detect_wan_ip(fallback="100.112.62.200"):
+    """Auto-detects the router's public or CGNAT WAN IP via fast external probe."""
+    env_wan = os.environ.get("ROUTER_WAN_IP")
+    if env_wan and env_wan.strip():
+        return env_wan.strip()
+
+    urls = [
+        'https://api.ipify.org',
+        'https://ifconfig.me/ip',
+        'https://icanhazip.com',
+        'http://checkip.amazonaws.com'
+    ]
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'curl/7.88.1'})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                wan = resp.read().decode('utf-8', errors='ignore').strip()
+                if re.match(r'^\d+\.\d+\.\d+\.\d+$', wan):
+                    return wan
+        except Exception:
+            continue
+
+    return fallback
+
+# Initial automatic network configuration
+HOST_IP = detect_local_ip(fallback="192.168.1.138")
+ROUTER_GATEWAY_IP = detect_gateway_ip(host_ip=HOST_IP, fallback="192.168.1.1")
+ROUTER_WAN_IP = detect_wan_ip(fallback="100.112.62.200")
+# DNS Redirect target: Uses ROUTER_WAN_IP (CGNAT 100.64.0.0/10) to bypass dnsmasq --stop-dns-rebind
+DNS_REDIRECT_IP = os.environ.get("DNS_REDIRECT_IP") or ROUTER_WAN_IP
+
+def refresh_network_settings():
+    """Refreshes all auto-detected network settings."""
+    global HOST_IP, ROUTER_GATEWAY_IP, ROUTER_WAN_IP, DNS_REDIRECT_IP
+    HOST_IP = detect_local_ip(fallback=HOST_IP)
+    ROUTER_GATEWAY_IP = detect_gateway_ip(host_ip=HOST_IP, fallback=ROUTER_GATEWAY_IP)
+    detected_wan = detect_wan_ip(fallback=ROUTER_WAN_IP)
+    if detected_wan:
+        ROUTER_WAN_IP = detected_wan
+        if not os.environ.get("DNS_REDIRECT_IP"):
+            DNS_REDIRECT_IP = ROUTER_WAN_IP
+    hub_log(f"[AUTO-NET 🌐] Host IP: {HOST_IP} | Gateway: {ROUTER_GATEWAY_IP} | WAN IP: {ROUTER_WAN_IP} | DNS Redirect: {DNS_REDIRECT_IP}")
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CERT_FILE = os.path.join(DIR, "server_cert.pem")
@@ -1348,6 +1461,13 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             data = {
                 "status": "OK",
                 "device_ip": get_ambi_ip(),
+                "network": {
+                    "host_ip": HOST_IP,
+                    "gateway_ip": ROUTER_GATEWAY_IP,
+                    "wan_ip": ROUTER_WAN_IP,
+                    "dns_redirect_ip": DNS_REDIRECT_IP,
+                    "ambi_ip": get_ambi_ip()
+                },
                 "ac_state": AC_STATE,
                 "comfort": comfort,
                 "profile": {
@@ -1573,6 +1693,24 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                 "interval_sec": 20,
                 "sensor_status": AC_STATE.get("sensor_status"),
                 "sensor_time": AC_STATE.get("sensor_time")
+            }).encode('utf-8'))
+            return
+
+        # 10.2 Auto Network Refresh / Detect API
+        if path == '/api/network/detect':
+            refresh_network_settings()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "OK",
+                "network": {
+                    "host_ip": HOST_IP,
+                    "gateway_ip": ROUTER_GATEWAY_IP,
+                    "wan_ip": ROUTER_WAN_IP,
+                    "dns_redirect_ip": DNS_REDIRECT_IP,
+                    "ambi_ip": get_ambi_ip()
+                }
             }).encode('utf-8'))
             return
 
@@ -1975,14 +2113,17 @@ def run_cloud_mock(port):
         hub_log(f"[-] Cloud :{port} Server Error: {e}")
 
 if __name__ == '__main__':
-    hub_log("=" * 65)
-    hub_log("  Ambi Climate Focused Cloud Mock Server (:8866 & :8867)")
-    hub_log(f"  PC Host IP     : {HOST_IP}")
-    hub_log(f"  Router WAN IP  : {ROUTER_WAN_IP}")
-    hub_log(f"  Ambi Device IP : {AMBI_IP}")
-    hub_log(f"  Cloud Ports    : TCP 8866 (Plain) & TCP 8867 (TLS 1.2)")
-    hub_log(f"  Dashboard Web  : http://localhost:8080 (or http://{HOST_IP}:8080)")
-    hub_log("=" * 65)
+    refresh_network_settings()
+    hub_log("=" * 68)
+    hub_log("  Ambi Climate All-in-One Local Hub & Comfort AI")
+    hub_log(f"  Auto-Detected Host IP    : {HOST_IP}")
+    hub_log(f"  Auto-Detected Gateway IP : {ROUTER_GATEWAY_IP}")
+    hub_log(f"  Auto-Detected Router WAN : {ROUTER_WAN_IP}")
+    hub_log(f"  DNS Redirect Target IP   : {DNS_REDIRECT_IP}")
+    hub_log(f"  Ambi Device IP (Locked)  : {AMBI_IP or 'Waiting for connect query...'}")
+    hub_log(f"  Cloud Ports              : TCP 8866 (Plain) & TCP 8867 (TLS 1.2)")
+    hub_log(f"  Dashboard Web            : http://localhost:8080 (or http://{HOST_IP}:8080)")
+    hub_log("=" * 68)
 
     # 1. DNS Server (Port 53 UDP) - Targets & query monitors
     threading.Thread(target=run_dns, daemon=True).start()
@@ -2023,6 +2164,7 @@ if __name__ == '__main__':
         print("     [6] สั่งไฟ LED หน้าเครื่องเป็นสีเขียว (Solid Green)")
         print("     [7] ปรับความสว่างหลอดไฟ LED (0=OFF, 1000-10000)")
         print("     [P] สลับเปิด/ปิดการดึงเซนเซอร์อัตโนมัติ (Auto Pull Query ทุก 20 วิ)")
+        print("     [N] ตรวจสอบและตรวจจับเน็ตเวิร์กใหม่ (Auto Detect Network)")
         print("     [M] สลับโหมด Ambi Climate (Comfort, Temperature, Manual, Away, Off)")
         print("     [L] ดึงและแสดง System Dump Log ของ Ambi (NSL)")
         print("     [R] Reset คืนค่า Cloud ฮ่องกง (connect.smartambi.com:8867)")
@@ -2081,6 +2223,10 @@ if __name__ == '__main__':
                     POLL_SENSORS_ENABLED = not POLL_SENSORS_ENABLED
                     state_txt = "ENABLED (ดึงทุก 20 วิ)" if POLL_SENSORS_ENABLED else "DISABLED (ปิด)"
                     print(f"\n[+] Auto Sensor Polling: {state_txt}\n")
+                elif cmd == "N":
+                    print("\n[*] Detecting and refreshing network settings...")
+                    refresh_network_settings()
+                    print(f"[+] Host IP: {HOST_IP} | Gateway: {ROUTER_GATEWAY_IP} | WAN: {ROUTER_WAN_IP} | DNS Redirect: {DNS_REDIRECT_IP}\n")
                 elif cmd == "M":
                     print("\nเลือกโหมด Ambi [1=Comfort, 2=Temperature, 3=Manual, 4=Away, 0=Off]: ", end="", flush=True)
                     m_choice = sys.stdin.readline().strip()

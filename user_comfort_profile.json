@@ -1,13 +1,83 @@
 {
   "auto_tune_enabled": true,
   "target_base_humidex": 26.0,
-  "user_offset": 2.2,
+  "user_offset": 1.7,
   "min_temp": 22,
   "max_temp": 27,
   "cooldown_minutes": 10,
-  "last_tune_time": 1793972486.1342323,
-  "last_tune_action": "Feedback: บันทึกความสบายเป้าหมายที่ 28.2°C (ชดเชย 2.2°C)",
+  "last_tune_time": 1793974263.5064642,
+  "last_tune_action": "Feedback: ร้อนไป -> ปรับ 23°C (ชดเชย 1.7°C)",
   "history": [
+    {
+      "time": "21:11:03",
+      "action": "Feedback: ร้อนไป -> ปรับ 23°C (ชดเชย 1.7°C)",
+      "temp": 23,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": 26.71,
+      "room_humidity": 61.61,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "21:10:57",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": 26.71,
+      "room_humidity": 61.61,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "21:10:31",
+      "action": "Mode Change: Comfort Mode",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "21:10:16",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "Error: timed out"
+    },
+    {
+      "time": "21:10:07",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "Error: timed out"
+    },
+    {
+      "time": "21:09:59",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "21:09:53",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "Error: timed out"
+    },
     {
       "time": "21:05:04",
       "action": "Web UI Manual Control",

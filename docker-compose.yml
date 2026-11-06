@@ -3,8 +3,23 @@ services:
     build: .
     container_name: ambi-hub
     restart: unless-stopped
-    network_mode: "host" # Host mode gives direct LAN access to ports and broadcasts
+    # network_mode: "host" is recommended for Linux/Raspberry Pi to receive UDP 53 DNS & UDP 9131 Beacon broadcasts directly
+    network_mode: "host"
+    environment:
+      - HOST_IP=${HOST_IP:-192.168.1.138}
+      - ROUTER_WAN_IP=${ROUTER_WAN_IP:-100.112.62.200}
+      - DNS_REDIRECT_IP=${DNS_REDIRECT_IP:-100.112.62.200}
     volumes:
       - ./user_comfort_profile.json:/app/user_comfort_profile.json
       - ./hub_activity.log:/app/hub_activity.log
 
+    # If running on Docker Desktop (Windows/macOS) where network_mode: "host" is not supported,
+    # comment out network_mode: "host" and uncomment the ports below:
+    # ports:
+    #   - "8080:8080"        # Web Dashboard
+    #   - "8866:8866"        # Cloud Mock (TCP)
+    #   - "8867:8867"        # Cloud Mock (TLS)
+    #   - "80:80"            # HTTP
+    #   - "443:443"          # HTTPS
+    #   - "53:53/udp"        # DNS Redirect Server
+    #   - "9131:9131/udp"    # AMX Beacon Discovery

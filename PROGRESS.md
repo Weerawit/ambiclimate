@@ -652,6 +652,29 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 * **เพิ่มปุ่มสลับ Auto Pull บน Web UI:** ในลิ้นชัก Device Settings มีป้ายสถานะ `🔄 Auto Pull: ON (20s)` ที่สามารถกดสลับเปิด/ปิดได้ทันที
 * **เพิ่มคำสั่ง Console CLI `[P]`:** กด `P` บนหน้าต่างคอนโซลเพื่อสลับเปิด/ปิด Auto Polling ได้ทันที
 
+---
+
+## 31. ระบบตรวจจับเครือข่ายอัตโนมัติ (Network Auto-Detection) และการ Deploy Docker Server จาก Git
+
+### 1. ระบบตรวจจับเครือข่ายอัตโนมัติ (Host IP, Gateway, Router WAN IP):
+* **Host LAN IP (`detect_local_ip`):** ตรวจสอบ IP ของเครื่องเซิร์ฟเวอร์โดยอัตโนมัติผ่าน UDP socket routing probe (`8.8.8.8:80`) โดยไม่ต้องส่งแพ็กเก็ตออกนอกเครื่องจริง ทำให้ได้ Local IP จริงของ Host หรือคอนเทนเนอร์ในโหมด host
+* **Router Gateway IP (`detect_gateway_ip`):** ตรวจหา Default Gateway ของเราเตอร์อัตโนมัติ:
+  * บน Linux / Docker: อ่านจากตาราง `/proc/net/route` (Destination `00000000`) หรือคำสั่ง `ip route`
+  * บน Windows: ตรวจสอบผ่าน `route print 0.0.0.0`
+  * Fallback อัตโนมัติ: ดึง Subnet จาก Host IP แล้วเติม `.1` (เช่น `192.168.1.1`)
+* **Router WAN IP (`detect_wan_ip`):** ตรวจจับ Public / CGNAT WAN IP ของเราเตอร์อัตโนมัติผ่าน Lightweight Web API (`api.ipify.org`, `ifconfig.me/ip`, `icanhazip.com`, `checkip.amazonaws.com`)
+* **DNS Redirect Target IP (`DNS_REDIRECT_IP`):** เชื่อมโยงกับ `ROUTER_WAN_IP` อัตโนมัติ เพื่อป้องกันไม่ให้ฟังก์ชัน `--stop-dns-rebind` ของ OpenWrt / dnsmasq ปฏิเสธ DNS Redirect Response
+* **Web UI & CLI:**
+  * เพิ่มการ์ด **🌐 การเชื่อมต่อเครือข่าย (Auto Detected)** ในลิ้นชัก Device Settings บน Web Dashboard พร้อมปุ่ม `🔄 Auto Detect`
+  * เพิ่มคำสั่ง `[N]` ใน Interactive Console CLI เพื่อสั่ง Refresh Network Settings ได้ตลอดเวลา
+  * เพิ่ม Endpoint `/api/network/detect` สำหรับเรียกตรวจจับและอัปเดตแบบ Dynamic
+
+### 2. การ Deploy บน Docker Server ผ่าน Git:
+* เพิ่ม `.dockerignore` ป้องกันการ build ไฟล์ที่ไม่เกี่ยวข้อง
+* อัปเดต `docker-compose.yml` ให้รองรับ `network_mode: "host"` สำหรับ Linux / Raspberry Pi เพื่อให้รับ DNS UDP 53 และ Beacon UDP 9131 ได้อย่างสมบูรณ์แบบ พร้อม fallback port mappings สำหรับสภาพแวดล้อมอื่นๆ
+* สามารถ Clone จาก GitHub (`git clone https://github.com/Weerawit/ambiclimate.git`) และสั่ง `docker compose up -d --build` เพื่อรันได้ทันทีโดยไม่ต้องแก้ไขค่า IP ด้วยตนเอง
+
+
 
 
 
