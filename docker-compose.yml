@@ -1,0 +1,9 @@
+services:
+  ambi-hub:
+    build: .
+    container_name: ambi-hub
+    restart: unless-stopped
+    network_mode: "host" # Host mode gives direct LAN access to ports and broadcasts
+    volumes:
+      - ./user_comfort_profile.json:/app/user_comfort_profile.json
+      - ./hub_activity.log:/app/hub_activity.log

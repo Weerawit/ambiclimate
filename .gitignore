@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Logs
+*.log
+hub_activity.log
+cloud_dump.log
+ambi_live_traffic.log
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Large APK / dumps (keep out of git)
+*.apk
+*.imazingapp
+*.pdf
+apk_unpacked/
+jadx_decompiled/
+imazing_extracted/

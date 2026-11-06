@@ -1,0 +1,32 @@
+{
+  "auto_tune_enabled": false,
+  "target_base_humidex": 26.0,
+  "user_offset": 0.0,
+  "min_temp": 22,
+  "max_temp": 27,
+  "cooldown_minutes": 10,
+  "last_tune_time": 1793955337.1616492,
+  "last_tune_action": "Cooled to 23°C (High)",
+  "history": [
+    {
+      "time": "15:57:04",
+      "action": "Web UI Manual Control",
+      "temp": 23,
+      "fan": "High",
+      "power": "Off",
+      "room_temp": 28.89,
+      "room_humidity": 49.73,
+      "result": "Error: timed out"
+    },
+    {
+      "time": "15:55:47",
+      "action": "Auto-Tune (ร้อนไป: Feels 34.3°C)",
+      "temp": 23,
+      "fan": "High",
+      "power": "On",
+      "room_temp": 28.89,
+      "room_humidity": 49.73,
+      "result": "Error: timed out"
+    }
+  ]
+}

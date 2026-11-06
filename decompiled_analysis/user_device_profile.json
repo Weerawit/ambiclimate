@@ -1,0 +1,588 @@
+{
+  "ZDEVICE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 8,
+      "Z_OPT": 1855,
+      "ZGEOLOCATION_ENABLED": 0,
+      "ZONLINE": 1,
+      "ZWIFI_QUALITY": 100,
+      "ZAPPLIANCE": 1,
+      "ZCOMFORT_COUNT": null,
+      "ZLOCATION": 1,
+      "ZSETTINGS": 1,
+      "ZUSER": 1,
+      "ZCONTROL_TARGET": 24.0,
+      "ZCREATED": 559134032,
+      "ZLAST_UPDATED_TIME": -978307200,
+      "ZORDER_KEY": 577728540.390949,
+      "ZSENSOR_COMFORT": -1.3374739831250129,
+      "ZSENSOR_COMFORT_CREATED": 577728540,
+      "ZSENSOR_HUMIDITY": 54.8,
+      "ZSENSOR_HUMIDITY_CREATED": 577728521,
+      "ZSENSOR_TEMPERATURE": 24.74,
+      "ZSENSOR_TEMPERATURE_CREATED": 577728521,
+      "ZCONTROL_MODE": "Temperature",
+      "ZCURRENT_USER_ACCESS": "Admin",
+      "ZFIRMWARE": "340",
+      "ZID": "72eb416f-a2da-484b-8295-a6b2d440759d",
+      "ZLOCAL_IP": null,
+      "ZMAC_ADDRESS": "DC:E5:33:13:02:BD",
+      "ZREAL_ID": "05D7FF353831564B43158715",
+      "ZROOM_NAME": "Bedroom ",
+      "ZTYPE": "IRBlaster"
+    }
+  ],
+  "ZAPPLIANCE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 3,
+      "Z_OPT": 552,
+      "ZDEVICE": 1,
+      "ZLAST_UPDATED_TIME": 577728521.100834,
+      "ZORDER_KEY": 577728540.394055,
+      "ZID": "eb793f4e-27f8-40a9-835e-394bac3f58f8",
+      "ZIRP_ID": "235",
+      "ZMANUFACTURER": "FUJITSU GENERAL",
+      "ZMODEL": null,
+      "ZSERIES": null,
+      "ZTYPE": "AirConditioner",
+      "ZWALLPAPER_LINK": "bg8"
+    }
+  ],
+  "ZAPPLIANCESTATE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 4,
+      "Z_OPT": 25,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "fan",
+      "ZVALUE": "high"
+    },
+    {
+      "Z_PK": 2,
+      "Z_ENT": 4,
+      "Z_OPT": 3,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "swing",
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 3,
+      "Z_ENT": 4,
+      "Z_OPT": 112,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "temperature",
+      "ZVALUE": "18"
+    },
+    {
+      "Z_PK": 4,
+      "Z_ENT": 4,
+      "Z_OPT": 158,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "power",
+      "ZVALUE": "on"
+    },
+    {
+      "Z_PK": 5,
+      "Z_ENT": 4,
+      "Z_OPT": 1,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "mode",
+      "ZVALUE": "cool"
+    },
+    {
+      "Z_PK": 42,
+      "Z_ENT": 4,
+      "Z_OPT": 1,
+      "ZAPPLIANCE": 1,
+      "ZKEY": "louver",
+      "ZVALUE": null
+    }
+  ],
+  "ZIRFEATURE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 3,
+      "ZNAME": "swing",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 2,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 2,
+      "ZNAME": "temperature",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 3,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 1,
+      "ZNAME": "temperature",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 4,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 1,
+      "ZNAME": "swing",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 5,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 3,
+      "ZNAME": "fan",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 6,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 2,
+      "ZNAME": "swing",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 7,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 3,
+      "ZNAME": "temperature",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 8,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 1,
+      "ZNAME": "fan",
+      "ZSELECTION_TYPE": "select_option"
+    },
+    {
+      "Z_PK": 9,
+      "Z_ENT": 16,
+      "Z_OPT": 1,
+      "ZMODE": 2,
+      "ZNAME": "fan",
+      "ZSELECTION_TYPE": "select_option"
+    }
+  ],
+  "ZIRFEATUREMODE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 17,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZAPPLIANCE": 1,
+      "ZORDER_KEY": 577728540.500688,
+      "ZNAME": "dry"
+    },
+    {
+      "Z_PK": 2,
+      "Z_ENT": 17,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZAPPLIANCE": 1,
+      "ZORDER_KEY": 577728540.505673,
+      "ZNAME": "fan"
+    },
+    {
+      "Z_PK": 3,
+      "Z_ENT": 17,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZAPPLIANCE": 1,
+      "ZORDER_KEY": 577728540.490779,
+      "ZNAME": "cool"
+    }
+  ],
+  "ZIRFEATUREVALUE": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.49765,
+      "ZVALUE": "31"
+    },
+    {
+      "Z_PK": 2,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 4,
+      "ZORDER_KEY": 577728540.501445,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 3,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.493772,
+      "ZVALUE": "19"
+    },
+    {
+      "Z_PK": 4,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.494192,
+      "ZVALUE": "20"
+    },
+    {
+      "Z_PK": 5,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 2,
+      "ZORDER_KEY": 577728540.507369,
+      "ZVALUE": "blank"
+    },
+    {
+      "Z_PK": 6,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.508019,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 7,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 1,
+      "ZORDER_KEY": 577728540.491861,
+      "ZVALUE": "off"
+    },
+    {
+      "Z_PK": 8,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.508301,
+      "ZVALUE": "high"
+    },
+    {
+      "Z_PK": 9,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 6,
+      "ZORDER_KEY": 577728540.506689,
+      "ZVALUE": "off"
+    },
+    {
+      "Z_PK": 10,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.493321,
+      "ZVALUE": "18"
+    },
+    {
+      "Z_PK": 11,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.497328,
+      "ZVALUE": "30"
+    },
+    {
+      "Z_PK": 12,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.499361,
+      "ZVALUE": "med-high"
+    },
+    {
+      "Z_PK": 13,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.494617,
+      "ZVALUE": "21"
+    },
+    {
+      "Z_PK": 14,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.496731,
+      "ZVALUE": "28"
+    },
+    {
+      "Z_PK": 15,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.509519,
+      "ZVALUE": "med-low"
+    },
+    {
+      "Z_PK": 16,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.50859,
+      "ZVALUE": "med-high"
+    },
+    {
+      "Z_PK": 17,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 1,
+      "ZORDER_KEY": 577728540.491563,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 18,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.508877,
+      "ZVALUE": "med"
+    },
+    {
+      "Z_PK": 19,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.495257,
+      "ZVALUE": "23"
+    },
+    {
+      "Z_PK": 20,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.499939,
+      "ZVALUE": "med-low"
+    },
+    {
+      "Z_PK": 21,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.499642,
+      "ZVALUE": "med"
+    },
+    {
+      "Z_PK": 22,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 3,
+      "ZORDER_KEY": 577728540.503472,
+      "ZVALUE": "blank"
+    },
+    {
+      "Z_PK": 23,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.495845,
+      "ZVALUE": "25"
+    },
+    {
+      "Z_PK": 24,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.498797,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 25,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.500235,
+      "ZVALUE": "low"
+    },
+    {
+      "Z_PK": 26,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 8,
+      "ZORDER_KEY": 577728540.504994,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 27,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.497026,
+      "ZVALUE": "29"
+    },
+    {
+      "Z_PK": 28,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 6,
+      "ZORDER_KEY": 577728540.506403,
+      "ZVALUE": "auto"
+    },
+    {
+      "Z_PK": 29,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.496427,
+      "ZVALUE": "27"
+    },
+    {
+      "Z_PK": 30,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 4,
+      "ZORDER_KEY": 577728540.501806,
+      "ZVALUE": "off"
+    },
+    {
+      "Z_PK": 31,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.497986,
+      "ZVALUE": "32"
+    },
+    {
+      "Z_PK": 32,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.495564,
+      "ZVALUE": "24"
+    },
+    {
+      "Z_PK": 33,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 9,
+      "ZORDER_KEY": 577728540.510124,
+      "ZVALUE": "low"
+    },
+    {
+      "Z_PK": 34,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.494942,
+      "ZVALUE": "22"
+    },
+    {
+      "Z_PK": 35,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 5,
+      "ZORDER_KEY": 577728540.499079,
+      "ZVALUE": "high"
+    },
+    {
+      "Z_PK": 36,
+      "Z_ENT": 18,
+      "Z_OPT": 286,
+      "ZAMBI_ENABLED": 1,
+      "ZFEATURE": 7,
+      "ZORDER_KEY": 577728540.496119,
+      "ZVALUE": "26"
+    }
+  ],
+  "ZUSER": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 28,
+      "Z_OPT": 3,
+      "ZEMAIL": "weerawit@hotmail.com",
+      "ZID": "57938ab0-5555-478c-ae45-83c77d88b053",
+      "ZSELECTED_DEVICE_ID": "72eb416f-a2da-484b-8295-a6b2d440759d"
+    }
+  ],
+  "ZLOCATION": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 19,
+      "Z_OPT": 279,
+      "ZACCURACY": 1,
+      "ZALTITUDE": 0.0,
+      "ZLATITUDE": 13.7662450270856,
+      "ZLONGITUDE": 100.543171959091,
+      "ZORDER_KEY": 577728540.393046,
+      "ZID": "c674b295-8fe6-4f1e-8e06-e3967d2e62d8",
+      "ZNAME": "Home",
+      "ZTIMEZONE": "Asia/Bangkok"
+    },
+    {
+      "Z_PK": 2,
+      "Z_ENT": 19,
+      "Z_OPT": 140,
+      "ZACCURACY": 1,
+      "ZALTITUDE": 0.0,
+      "ZLATITUDE": 13.768718361878,
+      "ZLONGITUDE": 100.544661874876,
+      "ZORDER_KEY": 560767658.376086,
+      "ZID": "62a98183-3b41-4b59-9fdd-415d9f5f823a",
+      "ZNAME": "Home2",
+      "ZTIMEZONE": "Asia/Bangkok"
+    }
+  ],
+  "ZSETTINGS": [
+    {
+      "Z_PK": 1,
+      "Z_ENT": 26,
+      "Z_OPT": 2,
+      "ZAUTO_LED_BRIGHTNESS": 1,
+      "ZBACKGROUND_SHADE": 0,
+      "ZBUZZER_VOLUME": 2,
+      "ZLED_BRIGHTNESS": 5170,
+      "ZREVERSE_LOOKUP": 1,
+      "ZTX_POWER": 30,
+      "ZWIFI_802_11N": 20,
+      "ZDEVICE": 1,
+      "ZBACKGROUND_SHADE_OPACITY": 0.0,
+      "ZBACKGROUND_IMAGE_PATH": null,
+      "ZID": "72eb416f-a2da-484b-8295-a6b2d440759d"
+    }
+  ]
+}
