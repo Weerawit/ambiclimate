@@ -22,6 +22,8 @@ from urllib.parse import urlparse, parse_qs
 HOST_IP = "192.168.1.138"
 ROUTER_WAN_IP = "100.112.62.200"
 ROUTER_GATEWAY_IP = "192.168.1.1"
+# Use ROUTER_WAN_IP (CGNAT 100.64.0.0/10) so OpenWrt dnsmasq doesn't drop it via --stop-dns-rebind
+DNS_REDIRECT_IP = ROUTER_WAN_IP
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CERT_FILE = os.path.join(DIR, "server_cert.pem")
@@ -1513,10 +1515,10 @@ def run_dns():
                     # Turn Green LED immediately upon acquiring Ambi IP!
                     threading.Thread(target=set_ambi_led_green, args=(client_ip,), daemon=True).start()
 
-                # Send DNS redirect to HOST_IP immediately so Ambi connects to Local Hub
-                resp = make_dns_redirect_response(data, HOST_IP)
+                # Send DNS redirect to DNS_REDIRECT_IP (ROUTER_WAN_IP) to bypass OpenWrt DNS-Rebind protection
+                resp = make_dns_redirect_response(data, DNS_REDIRECT_IP)
                 if resp:
-                    hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {HOST_IP}")
+                    hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {DNS_REDIRECT_IP}")
                     sock.sendto(resp, addr)
 
                 # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP & maintain Green LED
@@ -1552,9 +1554,9 @@ def run_dns():
             # Case A: Query comes from Ambi Climate device ONLY
             if is_from_ambi:
                 if is_ambi_exclusive or is_ambi_shared:
-                    resp = make_dns_redirect_response(data, HOST_IP)
+                    resp = make_dns_redirect_response(data, DNS_REDIRECT_IP)
                     if resp:
-                        hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {HOST_IP}")
+                        hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {DNS_REDIRECT_IP}")
                         sock.sendto(resp, addr)
                 else:
                     # Ambi device asking for external domain (e.g. NTP pool.ntp.org)
