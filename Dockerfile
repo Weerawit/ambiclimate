@@ -1,4 +1,5 @@
-FROM python:3.12-slim
+# Use python:3.9-slim-buster for native compatibility with Raspbian 10 Buster (avoids clone3 / libseccomp issue)
+FROM python:3.9-slim-buster
 
 WORKDIR /app
 

@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     # network_mode: "host" is recommended for Linux/Raspberry Pi (Raspbian Buster) to bind host ports & UDP broadcasts directly
     network_mode: "host"
+    security_opt:
+      - seccomp:unconfined
     environment:
       - HOST_IP=192.168.1.199
       - WEB_PORT=9090

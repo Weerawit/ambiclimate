@@ -706,6 +706,21 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 * ถอดพอร์ต `8080` ออกจาก `Dockerfile`
 * เข้าใช้งาน Web Dashboard ได้ทาง **`http://192.168.1.199:9090`**
 
+---
+
+## 34. แก้ไข `RuntimeError: can't start new thread` บน Raspbian 10 Buster (clone3 / libseccomp2)
+
+### 1. สาเหตุของปัญหา:
+* อิมเมจเดิม `python:3.12-slim` รันอยู่บน Debian 12 (Bookworm) ซึ่งใช้ไลบรารี `glibc 2.36+` โดยใน glibc เวอร์ชันใหม่นี้ ฟังก์ชันสร้างเธรด (`pthread_create`) จะเรียกใช้เคอร์เนลซิสคอล `clone3()` เป็นค่าเริ่มต้น
+* บนระบบโฮสต์ Raspberry Pi ที่ใช้ **Raspbian GNU/Linux 10 (Buster)** แพ็กเกจ `libseccomp2` ของระบบยังเป็นเวอร์ชันเก่า (2.3.x) ซึ่งยังไม่รู้จักซิสคอล `clone3` ทำให้ตัวกรองความปลอดภัยของ Docker ตอบกลับเป็น `EPERM` (Permission Denied) แทนที่จะเป็น `ENOSYS` ส่งผลให้ Python ล้มเหลวทันทีที่พยายามสร้างเธรดแรก (`_start_new_thread`)
+
+### 2. แนวทางแก้ไขแบบ 2 ชั้น:
+1. **เปลี่ยน Base Image ใน `Dockerfile` เป็น `python:3.9-slim-buster`:**
+   * เป็นอิมเมจที่คอมไพล์บน Debian 10 Buster โดยตรง จึงใช้ `glibc 2.28` ดั้งเดิมที่เรียกใช้คำสั่ง `clone()` แบบมาตรฐาน เข้ากันได้ 100% กับเคอร์เนลและ libseccomp2 ของ Raspbian Buster โดยไม่ต้องพึ่งคำสั่งใหม่
+2. **เพิ่ม `security_opt: [ "seccomp:unconfined" ]` ใน `docker-compose.yml`:**
+   * ปิดการบล็อกซิสคอลที่ไม่รู้จักของ seccomp รุ่นเก่าบน Docker โฮสต์ ทำให้เคอร์เนลส่งคำสั่งเข้า-ออกคอนเทนเนอร์ได้อย่างสมบูรณ์แบบ
+
+
 
 
 
