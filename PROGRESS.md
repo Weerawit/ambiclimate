@@ -592,6 +592,20 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 * ทำงานภายใต้ `AMBI_PORT_8070_LOCK` เพื่อความปลอดภัย ไม่ให้เกิดการชนกันของ socket
 * ยิงคำสั่ง `set_ambi_led_green()` ย้ำการปิด offline blink loop และคงค่า PWM สีเขียว (`NLD19`) อย่างต่อเนื่อง ทำให้ไฟหน้าเครื่องไม่กลับไปกะพริบสีส้มอีกเลย
 
+---
+
+## 28. ฟื้นฟู DNS Redirect ชี้ไปที่ Router WAN IP เพื่อทะลุ DNS-Rebind ของ `dnsmasq`
+
+### 1. ปัญหาที่ค้นพบจาก Live Log:
+* ในการทดสอบสด พบว่า Ambi Climate ส่ง DNS Query หา `connect.ambiclimate.com` และ `connect.smartambi.com` ซ้ำๆ ทุก 2-3 วินาที แต่ไม่มีการสร้าง TCP Connection เข้ามาที่พอร์ต 8866 หรือ 8867
+* **สาเหตุ:** ใน Commit `554707f` ได้มีการเปลี่ยนเป้าหมายของ Fake DNS จาก `ROUTER_WAN_IP` (`100.112.62.200`) มาเป็น `HOST_IP` (`192.168.1.138`)
+* เนื่องจาก `192.168.1.138` เป็น Private IP ตามมาตรฐาน RFC 1918 ทำให้ตัว `dnsmasq` ภายในเฟิร์มแวร์ของ Ambi ตรวจจับได้ว่าเป็น **DNS-Rebind Attack** (`--stop-dns-rebind`) และ **ทิ้ง (Drop) คำตอบ DNS นั้นทันที** ส่งผลให้ daemon `aircom` ไม่สามารถเชื่อมต่อกับ Cloud Mock Server ได้
+
+### 2. แนวทางแก้ไข:
+* ปรับ `DNS_REDIRECT_IP` ใน `ambi_hub.py` กลับมาใช้ `ROUTER_WAN_IP` (`100.112.62.200`)
+* เนื่องจากไอพี `100.112.62.200` อยู่ในช่วง **Carrier-Grade NAT (RFC 6598 - 100.64.0.0/10)** ซึ่งอยู่นอกนิยามของ RFC 1918 Private IP ทำให้ `dnsmasq` ของ Ambi ไม่มองว่าเป็น DNS Rebind และยอมรับผลลัพธ์ 100%
+* เมื่อ Ambi ต่อไปที่ `100.112.62.200:8867` หรือ `8866` เราเตอร์จะทำ NAT Hairpinning วนกลับมาให้คอมพิวเตอร์ Local Hub (`192.168.1.138`) อย่างสมบูรณ์ ทำให้ Ambi สามารถเชื่อมต่อคลาวด์ในเครื่องได้สำเร็จและหยุดการส่ง DNS Query ซ้ำๆ
+
 
 
 
