@@ -17,3 +17,4 @@ COPY . /app/
 EXPOSE 8080 8866 8867 80 443 53/udp 9131/udp
 
 CMD ["python", "ambi_hub.py"]
+

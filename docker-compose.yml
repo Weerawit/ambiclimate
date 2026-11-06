@@ -7,3 +7,4 @@ services:
     volumes:
       - ./user_comfort_profile.json:/app/user_comfort_profile.json
       - ./hub_activity.log:/app/hub_activity.log
+

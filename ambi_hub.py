@@ -1079,34 +1079,28 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(WEB_DASHBOARD_HTML.encode('utf-8'))
 
-# DNS Server
-TARGET_DOMAINS = [
+# DNS Server Domain Configuration
+AMBI_SPECIFIC_DOMAINS = [
     'ambiclimate.com',     # connect.ambiclimate.com, api.ambiclimate.com, ota.ambiclimate.com
     'smartambi.com',       # connect.smartambi.com, api.smartambi.com
     'ambiapis.com',        # api.ambiapis.com
     'tryambi.com',         # tryambi.com
     'tryambiapis.com',     # tryambiapis.com
-    'amazonaws.com',       # AWS IoT, API Gateway, S3, Cognito
-    'cloudfront.net',      # CloudFront CDN
     'globalcache.com',     # iTach WF2IR
 ]
 
-def build_dns_response(data, host_ip):
-    """
-    Parses incoming DNS query and constructs a fully RFC 1035 / RFC 6891
-    compliant DNS response pointing target domains to host_ip.
-    """
+AMBI_SHARED_DOMAINS = [
+    'amazonaws.com',       # AWS IoT, API Gateway (redirect ONLY for Ambi)
+    'cloudfront.net',      # CloudFront CDN (redirect ONLY for Ambi)
+]
+
+def parse_dns_domain(data):
+    """Parses domain name and query type from raw DNS packet."""
     if len(data) < 12:
-        return None, None, None
-
-    tid = data[:2]
-    flags_in = struct.unpack('>H', data[2:4])[0]
+        return None, None
     qdcount = struct.unpack('>H', data[4:6])[0]
-    arcount_in = struct.unpack('>H', data[10:12])[0]
-
     if qdcount == 0:
-        return None, None, None
-
+        return None, None
     pos = 12
     domain_parts = []
     while pos < len(data):
@@ -1119,44 +1113,71 @@ def build_dns_response(data, host_ip):
             break
         pos += 1
         if pos + length > len(data):
-            return None, None, None
+            return None, None
         domain_parts.append(data[pos:pos+length].decode('latin1', errors='ignore'))
         pos += length
-
     domain = '.'.join(domain_parts).lower()
     if pos + 4 > len(data):
-        return None, None, None
+        return None, None
+    qtype, _ = struct.unpack('>HH', data[pos:pos+4])
+    return domain, qtype
 
-    qtype, qclass = struct.unpack('>HH', data[pos:pos+4])
+def make_dns_redirect_response(data, redirect_ip):
+    """Constructs RFC 1035 DNS response redirecting A queries to redirect_ip."""
+    if len(data) < 12:
+        return None
+    tid = data[:2]
+    flags_in = struct.unpack('>H', data[2:4])[0]
+    qdcount = struct.unpack('>H', data[4:6])[0]
+    arcount_in = struct.unpack('>H', data[10:12])[0]
+    if qdcount == 0:
+        return None
+
+    pos = 12
+    while pos < len(data):
+        length = data[pos]
+        if length == 0:
+            pos += 1
+            break
+        if (length & 0xc0) == 0xc0:
+            pos += 2
+            break
+        pos += 1
+        pos += length
+
+    if pos + 4 > len(data):
+        return None
+
+    qtype, _ = struct.unpack('>HH', data[pos:pos+4])
     pos += 4
     question_raw = data[12:pos]
 
-    is_target = any(domain.endswith(t) for t in TARGET_DOMAINS)
-    if not is_target:
-        return False, domain, qtype
-
     rd = flags_in & 0x0100
-    resp_flags = 0x8400 | rd | 0x0080  # QR=1, AA=1, RD=rd, RA=1, RCODE=0 (0x8580 if RD=1)
+    resp_flags = 0x8400 | rd | 0x0080
     has_edns = (arcount_in > 0)
+    resp_arcount = 1 if has_edns else 0
 
-    if qtype == 28:  # AAAA (IPv6) -> return NOERROR with 0 answers so client uses IPv4 immediately
-        resp_arcount = 1 if has_edns else 0
-        header = tid + struct.pack('>HHHHH', resp_flags, 1, 0, 0, resp_arcount)
-        ans = b''
-    elif qtype in (1, 255):  # A (IPv4) or ANY
-        # Return Router's WAN IP (100.112.62.200) directly.
-        # Ambi's dnsmasq allows 100.x.x.x without DNS Rebind detection!
-        # Router Port Forwarding will forward 8866 & 8867 directly to 192.168.1.138!
-        resp_arcount = 1 if has_edns else 0
+    if qtype in (1, 255):  # A (IPv4) or ANY
         header = tid + struct.pack('>HHHHH', resp_flags, 1, 1, 0, resp_arcount)
-        ans = b'\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04' + socket.inet_aton(host_ip)
-    else:
-        resp_arcount = 1 if has_edns else 0
+        ans = b'\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04' + socket.inet_aton(redirect_ip)
+    else:  # AAAA (IPv6) or others -> NOERROR with 0 answer
         header = tid + struct.pack('>HHHHH', resp_flags, 1, 0, 0, resp_arcount)
         ans = b''
 
     opt_rr = b'\x00\x00\x29\x10\x00\x00\x00\x00\x00\x00\x00' if has_edns else b''
-    return header + question_raw + ans + opt_rr, domain, qtype
+    return header + question_raw + ans + opt_rr
+
+def forward_dns_upstream(sock, data, addr, timeout=2.0):
+    """Silently forwards DNS packet to 8.8.8.8 without logging."""
+    try:
+        up = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        up.settimeout(timeout)
+        up.sendto(data, ('8.8.8.8', 53))
+        r, _ = up.recvfrom(2048)
+        up.close()
+        sock.sendto(r, addr)
+    except Exception:
+        pass
 
 def run_dns():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1169,7 +1190,7 @@ def run_dns():
     for bind_ip in [HOST_IP, '0.0.0.0']:
         try:
             sock.bind((bind_ip, 53))
-            hub_log(f"[+] DNS SERVER running on UDP {bind_ip}:53 (Targeting {len(TARGET_DOMAINS)} domains)")
+            hub_log(f"[+] DNS SERVER running on UDP {bind_ip}:53 (Targeting Ambi Climate Only)")
             bound = True
             break
         except Exception:
@@ -1182,30 +1203,42 @@ def run_dns():
     while True:
         try:
             data, addr = sock.recvfrom(2048)
-            resp, domain, qtype = build_dns_response(data, ROUTER_WAN_IP)
+            client_ip = addr[0]
+            ambi_current = get_ambi_ip()
+            is_from_ambi = (client_ip == ambi_current)
 
-            if resp is False:
-                # Query does not match TARGET_DOMAINS -> Forward upstream to 8.8.8.8
-                # Log if query originates from Ambi Climate or is related to services
-                ambi_current = get_ambi_ip()
-                is_from_ambi = (addr[0] == ambi_current) or (addr[0].startswith("192.168.") and addr[0] not in (HOST_IP, ROUTER_GATEWAY_IP))
-                if is_from_ambi:
-                    hub_log(f"[DNS FORWARD 🌐] {domain} (qtype={qtype}) from Ambi ({addr[0]}) -> Forwarded to 8.8.8.8")
-                try:
-                    up = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    up.settimeout(2.0)
-                    up.sendto(data, ('8.8.8.8', 53))
-                    r, _ = up.recvfrom(2048)
-                    up.close()
-                    sock.sendto(r, addr)
-                except Exception:
-                    pass
-            elif resp is not None:
-                # Target domain matched!
-                update_ambi_ip(addr[0], source=f"DNS query '{domain}'")
-                hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) -> {ROUTER_WAN_IP} (client {addr[0]})")
-                sock.sendto(resp, addr)
-        except Exception as e:
+            domain, qtype = parse_dns_domain(data)
+            if not domain:
+                continue
+
+            # Check domain types
+            is_ambi_exclusive = any(domain.endswith(t) for t in AMBI_SPECIFIC_DOMAINS)
+            is_ambi_shared = any(domain.endswith(t) for t in AMBI_SHARED_DOMAINS)
+
+            # Case 1: Unregistered IP querying an Ambi-exclusive domain (e.g. smartambi.com)
+            if not is_from_ambi and is_ambi_exclusive and client_ip not in (HOST_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
+                update_ambi_ip(client_ip, source=f"DNS Exclusive Domain '{domain}'")
+                ambi_current = client_ip
+                is_from_ambi = True
+
+            # Case 2: Query comes from Ambi Climate device ONLY
+            if is_from_ambi:
+                if is_ambi_exclusive or is_ambi_shared:
+                    resp = make_dns_redirect_response(data, ROUTER_WAN_IP)
+                    if resp:
+                        hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {ROUTER_WAN_IP}")
+                        sock.sendto(resp, addr)
+                else:
+                    # Ambi device asking for external domain (e.g. NTP pool.ntp.org)
+                    hub_log(f"[DNS FORWARD 🌐] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> Forwarded to 8.8.8.8")
+                    forward_dns_upstream(sock, data, addr)
+
+            # Case 3: Query is from OTHER machines in the network (PC, Phone, Smart TV)
+            else:
+                # Silently forward to 8.8.8.8 without logging, intercepting, or polluting Ambi state
+                forward_dns_upstream(sock, data, addr)
+
+        except Exception:
             pass
 
 def run_https(port):
