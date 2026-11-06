@@ -10,11 +10,11 @@ ENV PYTHONIOENCODING=utf-8
 COPY . /app/
 
 # Expose ports
-# Web Dashboard: 9090 (and backward-compatible 8080)
+# Web Dashboard: 9090
 # Cloud Mock: 8866 (TCP), 8867 (TLS)
 # HTTP/HTTPS: 80, 443
 # DNS & Beacon: 53/udp, 9131/udp
-EXPOSE 9090 8080 8866 8867 80 443 53/udp 9131/udp
+EXPOSE 9090 8866 8867 80 443 53/udp 9131/udp
 
 CMD ["python", "ambi_hub.py"]
 

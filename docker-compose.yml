@@ -6,9 +6,9 @@ services:
     # network_mode: "host" is recommended for Linux/Raspberry Pi (Raspbian Buster) to bind host ports & UDP broadcasts directly
     network_mode: "host"
     environment:
+      - HOST_IP=192.168.1.199
       - WEB_PORT=9090
-      # Leave environment variables below commented out for 100% automatic IP detection:
-      # - HOST_IP=
+      # Optional overrides:
       # - ROUTER_WAN_IP=
       # - DNS_REDIRECT_IP=
     volumes:

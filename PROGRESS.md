@@ -690,8 +690,22 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
   3. Kernel UDP Socket Routing Probe ตรงไปยัง Gateway IP และ 8.8.8.8
 * **เปลี่ยนพอร์ต Web Dashboard เป็น 9090:**
   * กำหนดพอร์ตหลักเป็น `9090` ผ่านตัวแปร `DASHBOARD_PORT` และ `WEB_PORT=9090` ใน `docker-compose.yml`
-  * เพิ่ม Fallback Listener บนพอร์ต `8080` คู่ขนาน เพื่อให้ลิงก์เดิมยังคงใช้งานได้
-  * อัปเดต `Dockerfile` ให้ `EXPOSE 9090 8080 ...`
+  * อัปเดต `Dockerfile` ให้ `EXPOSE 9090 ...`
+
+---
+
+## 33. กำหนด Fixed IP = 192.168.1.199 และปิดพอร์ต 8080 โดยสมบูรณ์ (Port Conflict Protection)
+
+### 1. การกำหนด IP คงที่ (Fixed Host IP):
+* กำหนด `HOST_IP=192.168.1.199` ใน `docker-compose.yml` และตั้งเป็นค่า Fallback หลักใน `ambi_hub.py` ทำให้ระบบบน Raspberry Pi ใช้งาน IP `192.168.1.199` อย่างแม่นยำแน่นอน
+* ปุ่มชี้ Cloud บน Web UI เชื่อมต่อมายัง `192.168.1.199:8867` (TLS) และ `192.168.1.199:8866` (TCP) โดยตรง
+
+### 2. ปิดการผูกพอร์ต 8080 โดยสมบูรณ์ (ป้องกัน Address already in use):
+* เนื่องจากบน Raspberry Pi มีเซอร์วิสอื่นใช้งานพอร์ต `8080` อยู่ก่อนแล้ว
+* ถอดการ Bind พอร์ต `8080` ออกจาก `ambi_hub.py` โดยสิ้นเชิง (รันเฉพาะพอร์ต `9090` เท่านั้น)
+* ถอดพอร์ต `8080` ออกจาก `Dockerfile`
+* เข้าใช้งาน Web Dashboard ได้ทาง **`http://192.168.1.199:9090`**
+
 
 
 

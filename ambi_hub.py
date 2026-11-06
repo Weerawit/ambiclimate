@@ -71,11 +71,10 @@ def detect_gateway_ip(fallback="192.168.1.1"):
 
     return fallback
 
-def detect_local_ip(gateway_ip=None, fallback="192.168.1.138"):
-    """Auto-detects the host's real primary LAN IP address (tested on Raspbian 10 Buster, Linux, and Windows)."""
+def detect_local_ip(gateway_ip=None, fallback="192.168.1.199"):
+    """Auto-detects or sets the host's LAN IP address (Fixed Default IP: 192.168.1.199)."""
     env_ip = os.environ.get("HOST_IP")
-    # Only use env_ip if user explicitly specified a non-dummy value
-    if env_ip and env_ip.strip() and env_ip.strip() != "192.168.1.138":
+    if env_ip and env_ip.strip():
         return env_ip.strip()
 
     # 1. Linux ip -4 route get <target> (Rock-solid on Raspbian Buster)
@@ -161,7 +160,7 @@ def detect_wan_ip(fallback="100.112.62.200"):
 
 # Initial automatic network configuration (Gateway first, then Host LAN IP)
 ROUTER_GATEWAY_IP = detect_gateway_ip(fallback="192.168.1.1")
-HOST_IP = detect_local_ip(gateway_ip=ROUTER_GATEWAY_IP, fallback="192.168.1.138")
+HOST_IP = detect_local_ip(gateway_ip=ROUTER_GATEWAY_IP, fallback="192.168.1.199")
 ROUTER_WAN_IP = detect_wan_ip(fallback="100.112.62.200")
 # DNS Redirect target: Uses ROUTER_WAN_IP (CGNAT 100.64.0.0/10) to bypass dnsmasq --stop-dns-rebind
 DNS_REDIRECT_IP = os.environ.get("DNS_REDIRECT_IP") or ROUTER_WAN_IP
@@ -1137,10 +1136,10 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 Cloud ปลายทางปัจจุบัน: <b id="currentCloudTarget" style="color: #38bdf8;">กำลังตรวจสอบ...</b>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                <button class="btn-action" style="flex: 1 1 45%; background: #059669; font-size: 12px; padding: 8px 12px;" onclick="changeCloud('192.168.1.138:8867')">
+                <button class="btn-action" style="flex: 1 1 45%; background: #059669; font-size: 12px; padding: 8px 12px;" onclick="changeCloud((window.location.hostname || '192.168.1.199') + ':8867')">
                     🔄 ชี้มาเครื่องนี้ (TLS :8867)
                 </button>
-                <button class="btn-action" style="flex: 1 1 45%; background: #0284c7; font-size: 12px; padding: 8px 12px;" onclick="changeCloud('192.168.1.138:8866')">
+                <button class="btn-action" style="flex: 1 1 45%; background: #0284c7; font-size: 12px; padding: 8px 12px;" onclick="changeCloud((window.location.hostname || '192.168.1.199') + ':8866')">
                     🔄 ชี้มาเครื่องนี้ (TCP :8866)
                 </button>
                 <button class="btn-action" style="flex: 1 1 45%; background: #d97706; font-size: 12px; padding: 8px 12px;" onclick="reconnectCloud()">
@@ -1415,10 +1414,10 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
         AC_STATE["last_seen"] = time.strftime('%H:%M:%S')
         hub_log(f"[GET :{self.server.server_port}] from {self.client_address[0]} Path: {self.path}")
 
-        if (self.server.server_port in (DASHBOARD_PORT, 9090, 8080)) and (self.path == '/' or self.path.startswith('/api')):
+        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and (self.path == '/' or self.path.startswith('/api')):
             self.handle_web_ui()
             return
-
+ 
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Connection', 'keep-alive')
@@ -1445,7 +1444,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         AC_STATE["last_seen"] = time.strftime('%H:%M:%S')
-        if (self.server.server_port in (DASHBOARD_PORT, 9090, 8080)) and self.path.startswith('/api'):
+        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and self.path.startswith('/api'):
             self.handle_web_ui()
             return
         length = int(self.headers.get('Content-Length', 0))
@@ -2179,13 +2178,8 @@ if __name__ == '__main__':
     threading.Thread(target=run_http, args=(80,), daemon=True).start()
     threading.Thread(target=run_https, args=(443,), daemon=True).start()
 
-    # 4. Web UI Dashboard (:9090 default, fallback to :8080)
+    # 4. Web UI Dashboard (:9090 - Port 8080 is reserved/used by other service)
     threading.Thread(target=run_http, args=(DASHBOARD_PORT,), daemon=True).start()
-    if DASHBOARD_PORT != 8080:
-        try:
-            threading.Thread(target=run_http, args=(8080,), daemon=True).start()
-        except Exception:
-            pass
 
     # 5. Live Hardware Sensor Poller (TCP 8070 to Ambi Climate) - ดึงข้อมูล Pull Query อัตโนมัติทุก 20 วินาที
     threading.Thread(target=poll_live_sensors, args=(20,), daemon=True).start()
