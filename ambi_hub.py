@@ -728,23 +728,30 @@ def auto_tuning_worker():
         except Exception as e:
             hub_log(f"[-] Auto-Tuning worker exception: {e}")
 
-def poll_live_sensors():
+POLL_SENSORS_ENABLED = True
+
+def poll_live_sensors(interval=20):
     """Periodically queries Port 8070 on Ambi Climate to retrieve real-time live sensor data."""
     from test_daikin import get_live_sensors
+    hub_log(f"[+] Live Hardware Sensor Poller (Pull Query :8070) worker started (every {interval}s).")
     while True:
         try:
+            if not POLL_SENSORS_ENABLED:
+                time.sleep(5)
+                continue
+
             if not AMBI_READY_EVENT.is_set():
                 AC_STATE["sensor_status"] = "Waiting for Ambi connect.* DNS query..."
                 time.sleep(2)
                 continue
 
-            target_ip = get_ambi_ip()
+            target_ip = get_ambi_ip() or get_cached_ambi_ip()
             if not target_ip:
                 time.sleep(2)
                 continue
 
             with AMBI_PORT_8070_LOCK:
-                live = get_live_sensors(target_ip, port=8070, timeout=3.0)
+                live = get_live_sensors(target_ip, port=8070, timeout=3.5)
             if live.get("temperature") is not None:
                 AC_STATE["room_temp"] = live["temperature"]
             if live.get("humidity") is not None:
@@ -759,12 +766,12 @@ def poll_live_sensors():
             AC_STATE["comfort_label"] = c["label"]
             AC_STATE["comfort_badge_color"] = c["badge_color"]
 
-            AC_STATE["sensor_status"] = f"LIVE ({target_ip})"
+            AC_STATE["sensor_status"] = f"PULL LIVE ({target_ip})"
             AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
-            hub_log(f"[SENSOR UPDATE] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
+            hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
         except Exception as e:
             AC_STATE["sensor_status"] = f"Error: {e}"
-        time.sleep(20)
+        time.sleep(interval)
 
 DASHBOARD_HTML_FILE = os.path.join(DIR, "web_dashboard.html")
 
@@ -1541,13 +1548,32 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "device_ip": get_ambi_ip()}).encode('utf-8'))
             return
 
-        # 10. Manual Sensor Refresh API (On-Demand)
-        if path == '/api/sensors/refresh':
+        # 10. Manual Sensor Refresh / Query API (On-Demand)
+        if path in ('/api/sensors/query', '/api/sensors/refresh'):
             res = query_live_sensors()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(res).encode('utf-8'))
+            return
+
+        # 10.1 Sensor Polling Status / Toggle API
+        if path == '/api/sensors/polling':
+            global POLL_SENSORS_ENABLED
+            en = query.get('enable', [None])[0]
+            if en is not None:
+                POLL_SENSORS_ENABLED = str(en).lower() in ('1', 'true', 'on')
+                hub_log(f"[*] Sensor Polling updated: enabled={POLL_SENSORS_ENABLED}")
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "OK",
+                "polling_enabled": POLL_SENSORS_ENABLED,
+                "interval_sec": 20,
+                "sensor_status": AC_STATE.get("sensor_status"),
+                "sensor_time": AC_STATE.get("sensor_time")
+            }).encode('utf-8'))
             return
 
         # 11. Set LED Brightness API (0 = OFF, 1-10000 = PWM brightness)
@@ -1972,9 +1998,9 @@ if __name__ == '__main__':
     # 4. Web UI Dashboard (8080)
     threading.Thread(target=run_http, args=(8080,), daemon=True).start()
 
-    # 5. Live Hardware Sensor Poller (TCP 8070 to Ambi Climate) - ปิดไว้ชั่วคราวเพื่อรอข้อมูล Push จาก Ambi
-    # threading.Thread(target=poll_live_sensors, daemon=True).start()
-    hub_log("[*] Live Sensor Polling is DISABLED (Waiting for Ambi Push Mode).")
+    # 5. Live Hardware Sensor Poller (TCP 8070 to Ambi Climate) - ดึงข้อมูล Pull Query อัตโนมัติทุก 20 วินาที
+    threading.Thread(target=poll_live_sensors, args=(20,), daemon=True).start()
+    hub_log("[+] Live Hardware Sensor Poller (Pull Query :8070) is ENABLED (every 20s).")
 
     # 6. Hybrid Local Comfort AI Auto-Tuning Worker
     threading.Thread(target=auto_tuning_worker, daemon=True).start()
@@ -1996,6 +2022,7 @@ if __name__ == '__main__':
         print("     [5] อ่านค่าเซนเซอร์สดทันที (Manual Query NTP / NHM / NLU)")
         print("     [6] สั่งไฟ LED หน้าเครื่องเป็นสีเขียว (Solid Green)")
         print("     [7] ปรับความสว่างหลอดไฟ LED (0=OFF, 1000-10000)")
+        print("     [P] สลับเปิด/ปิดการดึงเซนเซอร์อัตโนมัติ (Auto Pull Query ทุก 20 วิ)")
         print("     [M] สลับโหมด Ambi Climate (Comfort, Temperature, Manual, Away, Off)")
         print("     [L] ดึงและแสดง System Dump Log ของ Ambi (NSL)")
         print("     [R] Reset คืนค่า Cloud ฮ่องกง (connect.smartambi.com:8867)")
@@ -2050,6 +2077,10 @@ if __name__ == '__main__':
                             set_ambi_led_brightness(lvl, target)
                         except Exception as ex:
                             print(f"[!] Invalid brightness: {ex}")
+                elif cmd == "P":
+                    POLL_SENSORS_ENABLED = not POLL_SENSORS_ENABLED
+                    state_txt = "ENABLED (ดึงทุก 20 วิ)" if POLL_SENSORS_ENABLED else "DISABLED (ปิด)"
+                    print(f"\n[+] Auto Sensor Polling: {state_txt}\n")
                 elif cmd == "M":
                     print("\nเลือกโหมด Ambi [1=Comfort, 2=Temperature, 3=Manual, 4=Away, 0=Off]: ", end="", flush=True)
                     m_choice = sys.stdin.readline().strip()

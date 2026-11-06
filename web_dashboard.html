@@ -807,14 +807,17 @@
                     </button>
                 </div>
 
-                <!-- 2. On-Demand Sensor Query (Query Button according to user request) -->
+                <!-- 2. On-Demand Sensor Query & Background Pull Query -->
                 <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
-                    <div class="control-label">🌡️ อ่านค่าเซนเซอร์สด (On-Demand Query)</div>
-                    <button class="btn-action" style="background: #0284c7;" onclick="querySensorsNow()">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="control-label">🌡️ เซนเซอร์อุณหภูมิ & ความชื้น (Port 8070)</span>
+                        <span id="pollingBadge" class="comfort-pill" style="font-size: 10px; cursor: pointer;" onclick="togglePolling()">🔄 Auto Pull: ON (20s)</span>
+                    </div>
+                    <button class="btn-action" style="background: #0284c7; margin-top: 6px;" onclick="querySensorsNow()">
                         🔄 Query อุณหภูมิ & ความชื้นสดเดี๋ยวนี้ (:8070)
                     </button>
-                    <div id="sensorDetailText" style="font-size: 11px; color: var(--text-dim); text-align: center;">
-                        Passive Push Mode &bull; อัปเดตล่าสุด: --
+                    <div id="sensorDetailText" style="font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 4px;">
+                        Auto Pull Active &bull; อัปเดตล่าสุด: --
                     </div>
                 </div>
 
@@ -1065,6 +1068,33 @@
             }
         }
 
+        // Toggle Auto Polling
+        async function togglePolling() {
+            showToast('⏳ กำลังสลับสถานะ Auto Pull...');
+            try {
+                const cur = document.getElementById('pollingBadge').innerText.includes('ON');
+                const next = cur ? 0 : 1;
+                const res = await fetch('/api/sensors/polling?enable=' + next);
+                const data = await res.json();
+                const badge = document.getElementById('pollingBadge');
+                if (data.polling_enabled) {
+                    badge.innerText = '🔄 Auto Pull: ON (20s)';
+                    badge.style.color = 'var(--ambi-teal)';
+                    badge.style.borderColor = 'rgba(0, 196, 180, 0.4)';
+                    badge.style.background = 'rgba(0, 196, 180, 0.2)';
+                    showToast('✅ เปิดการดึงข้อมูลอัตโนมัติ (Pull Query ทุก 20 วิ)');
+                } else {
+                    badge.innerText = '⚪ Auto Pull: OFF';
+                    badge.style.color = 'var(--text-dim)';
+                    badge.style.borderColor = 'var(--ambi-surface-border)';
+                    badge.style.background = 'rgba(255, 255, 255, 0.05)';
+                    showToast('⚪ ปิดการดึงข้อมูลอัตโนมัติ');
+                }
+            } catch(e) {
+                showToast('❌ ไม่สามารถสลับสถานะได้');
+            }
+        }
+
         // LED Brightness Controls
         function updateBrightnessLabel(val) {
             const pct = Math.round(val / 100);
@@ -1164,3 +1194,4 @@
     </script>
 </body>
 </html>
+

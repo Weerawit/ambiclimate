@@ -9,6 +9,26 @@
   "last_tune_action": "Feedback: บันทึกความสบายเป้าหมายที่ 28.2°C (ชดเชย 2.2°C)",
   "history": [
     {
+      "time": "21:05:04",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
+    {
+      "time": "21:04:52",
+      "action": "Mode Change: Comfort Mode",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
+    {
       "time": "20:50:34",
       "action": "Web UI Manual Control",
       "temp": 24,
