@@ -242,6 +242,21 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
             hub_log(f"[-] Error setting LED to Green on {ip}: {e}")
             return False
 
+def led_keepalive_worker(interval_sec=120):
+    """
+    Periodically reaffirms Solid Green LED every interval_sec (default 120s)
+    to ensure the internal 1NCO slave watchdog never reverts the LED to amber.
+    """
+    while True:
+        try:
+            time.sleep(interval_sec)
+            if AMBI_READY_EVENT.is_set():
+                target = get_ambi_ip() or get_cached_ambi_ip()
+                if target:
+                    set_ambi_led_green(target)
+        except Exception:
+            pass
+
 def run_beacon_listener():
     """Listens for AMX Beacon on UDP 9131 to auto-detect Ambi IP."""
     try:
@@ -1762,6 +1777,9 @@ if __name__ == '__main__':
 
     # 7. AMX Beacon Listener (Port 9131 UDP)
     threading.Thread(target=run_beacon_listener, daemon=True).start()
+
+    # 8. Solid Green LED Keep-Alive Watchdog (Reaffirms every 120s)
+    threading.Thread(target=led_keepalive_worker, args=(120,), daemon=True).start()
 
     def interactive_cli():
         time.sleep(2.0)
