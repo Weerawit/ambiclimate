@@ -34,6 +34,7 @@ from test_daikin import save_ambi_ip, is_valid_ambi
 AMBI_IP = None
 AMBI_READY_EVENT = threading.Event()
 AMBI_AUTO_RETARGETED = False
+AMBI_PORT_8070_LOCK = threading.Lock()
 
 def get_ambi_ip():
     global AMBI_IP
@@ -53,34 +54,45 @@ def update_ambi_ip(new_ip, source=""):
 def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
     """Sends framed command to Ambi on Port 8070 and returns the raw response."""
     ip = target_ip or get_ambi_ip()
+    if not ip:
+        hub_log(f"[-] Command to Ambi ({cmd_text}) skipped: Ambi IP not yet acquired (waiting for DNS connect query).")
+        return None
     seq = "01"
     packet = b"\x07" + seq.encode('ascii') + cmd_text.encode('latin1') + b"\r"
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(timeout)
-        s.connect((ip, port))
-        s.sendall(packet)
-        time.sleep(0.15)
-        resp = s.recv(2048)
-        s.close()
-        return resp
-    except Exception as e:
-        hub_log(f"[-] Command to Ambi ({cmd_text} -> {ip}:{port}) failed: {e}")
-        return None
+    with AMBI_PORT_8070_LOCK:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+            s.connect((ip, port))
+            s.sendall(packet)
+            time.sleep(0.15)
+            resp = s.recv(2048)
+            s.close()
+            return resp
+        except Exception as e:
+            hub_log(f"[-] Command to Ambi ({cmd_text} -> {ip}:{port}) failed: {e}")
+            return None
 
 def get_cloud_server_setting(target_ip=None):
     """Queries current configured Cloud Server (NCA) from Ambi Port 8070."""
     ip = target_ip or get_ambi_ip()
+    if not ip:
+        return "Waiting for Ambi connect..."
     resp = send_ambi_cmd("NCA", ip)
     if resp and len(resp) >= 7 and resp[0] == 7:
-        return resp[7:].decode('latin1', errors='ignore').strip('\r\n ')
+        val = resp[7:].decode('latin1', errors='ignore').strip('\r\n ')
+        return val if val else "Empty (Default Cloud)"
     elif resp:
-        return resp.decode('latin1', errors='ignore').strip()
+        val = resp.decode('latin1', errors='ignore').strip()
+        return val if val else "Empty (Default Cloud)"
     return "Unknown / No response"
 
 def change_cloud_server(new_server_port, target_ip=None):
     """Sends NCE to change server and NCD to force reconnect."""
     ip = target_ip or get_ambi_ip()
+    if not ip:
+        hub_log("[-] Cannot change cloud server: Ambi IP not yet acquired.")
+        return {"status": "Error", "message": "Ambi IP not yet acquired"}
     hub_log(f"\n{'='*65}")
     hub_log(f"🚀 [STEP 3: CHANGING CLOUD SERVER] Target Ambi IP: {ip}")
     hub_log(f"   Target Server: {new_server_port}")
@@ -109,43 +121,48 @@ def change_cloud_server(new_server_port, target_ip=None):
         "response_cd": cd_decoded
     }
 
-def fetch_ambi_system_log(target_ip=None, timeout=3.5):
+def fetch_ambi_system_log(target_ip=None, timeout=7.0):
     """Retrieves full internal system log from Ambi Climate using NSL command."""
     ip = target_ip or get_ambi_ip()
+    if not ip:
+        return "Ambi IP not yet acquired. Waiting for Ambi to send DNS connect query..."
     hub_log(f"[*] Fetching Ambi System Log from {ip}:8070 (NSL)...")
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(timeout)
-        s.connect((ip, 8070))
-        s.sendall(b"\x0701NSL\r")
-        chunks = []
-        while True:
-            try:
-                data = s.recv(4096)
-                if not data:
+    with AMBI_PORT_8070_LOCK:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+            s.connect((ip, 8070))
+            s.sendall(b"\x0701NSL\r")
+            chunks = []
+            start_t = time.time()
+            while time.time() - start_t < timeout:
+                try:
+                    r, _, _ = select.select([s], [], [], 0.8)
+                    if not r:
+                        if chunks:
+                            break
+                        continue
+                    data = s.recv(4096)
+                    if not data:
+                        break
+                    chunks.append(data)
+                except socket.timeout:
                     break
-                chunks.append(data)
-                time.sleep(0.15)
-                r, _, _ = select.select([s], [], [], 0.3)
-                if not r:
-                    break
-            except socket.timeout:
-                break
-        s.close()
-        raw = b"".join(chunks)
-        if raw:
-            text = raw.decode("utf-8", errors="replace")
-            log_file = os.path.join(DIR, "ambi_system_dump.log")
-            with open(log_file, "wb") as f:
-                f.write(raw)
-            hub_log(f"[+] Received {len(raw)} bytes of Ambi System Log -> Saved to {log_file}")
-            return text
-        else:
-            hub_log("[-] No log data returned from device.")
-            return "No log data returned from device."
-    except Exception as e:
-        hub_log(f"[-] Error fetching system log from {ip}: {e}")
-        return f"Error connecting to Ambi on {ip}:8070 -> {e}"
+            s.close()
+            raw = b"".join(chunks)
+            if raw:
+                text = raw.decode("utf-8", errors="replace")
+                log_file = os.path.join(DIR, "ambi_system_dump.log")
+                with open(log_file, "wb") as f:
+                    f.write(raw)
+                hub_log(f"[+] Received {len(raw)} bytes of Ambi System Log -> Saved to {log_file}")
+                return text
+            else:
+                hub_log("[-] No log data returned from device.")
+                return "No log data returned from device."
+        except Exception as e:
+            hub_log(f"[-] Error fetching system log from {ip}: {e}")
+            return f"Error connecting to Ambi on {ip}:8070 -> {e}"
 
 def run_beacon_listener():
     """Listens for AMX Beacon on UDP 9131 to auto-detect Ambi IP."""
@@ -327,6 +344,9 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
 
     is_power = str(AC_STATE['power']).lower() != 'off'
     target_ip = get_ambi_ip()
+    if not target_ip:
+        hub_log(f"[IR TRANSMIT SKIPPED] ({reason}) Ambi IP not yet acquired.")
+        return "Ambi IP not yet acquired"
     ir_resp = ""
     s = None
     try:
@@ -484,7 +504,8 @@ def poll_live_sensors():
                 time.sleep(2)
                 continue
 
-            live = get_live_sensors(target_ip, port=8070, timeout=3.0)
+            with AMBI_PORT_8070_LOCK:
+                live = get_live_sensors(target_ip, port=8070, timeout=3.0)
             if live.get("temperature") is not None:
                 AC_STATE["room_temp"] = live["temperature"]
             if live.get("humidity") is not None:
@@ -933,7 +954,26 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 class AmbiAPIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        hub_log(f"[HTTP/S :{self.server.server_port}] {self.address_string()} - {format % args}")
+        msg = format % args
+        if "Bad request version" in msg or "code 400" in msg:
+            return
+        hub_log(f"[HTTP/S :{self.server.server_port}] {self.address_string()} - {msg}")
+
+    def log_error(self, format, *args):
+        msg = format % args
+        if "Bad request version" in msg or "code 400" in msg:
+            return
+        hub_log(f"[-] HTTP Error :{self.server.server_port} - {msg}")
+
+    def handle_one_request(self):
+        try:
+            peek = self.connection.recv(1, socket.MSG_PEEK)
+            if peek and peek[0] == 0x16:
+                self.close_connection = True
+                return
+        except Exception:
+            pass
+        super().handle_one_request()
 
     def do_GET(self):
         AC_STATE["last_seen"] = time.strftime('%H:%M:%S')
@@ -1306,10 +1346,10 @@ def run_dns():
             if not domain:
                 continue
 
-            # Requirement 1: Check for Ambi connect query (e.g. connect.smartambi.com, connect.ambiclimate.com)
-            is_connect_query = ("connect." in domain) and any(x in domain for x in ("smartambi.com", "ambiclimate.com", "tryambi.com"))
+            # Requirement 1: Check for Ambi domain queries (e.g. connect.smartambi.com, connect.ambiclimate.com)
+            is_ambi_domain = any(domain.endswith(t) for t in ("smartambi.com", "ambiclimate.com", "tryambi.com", "ambiapis.com", "tryambiapis.com"))
 
-            if is_connect_query and client_ip not in (HOST_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
+            if is_ambi_domain and client_ip not in (HOST_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
                 global AMBI_IP, AMBI_AUTO_RETARGETED
                 if AMBI_IP != client_ip:
                     AMBI_IP = client_ip
@@ -1321,10 +1361,10 @@ def run_dns():
                     hub_log(f"   -> Locked Ambi IP into memory: {AMBI_IP}")
                     hub_log(f"{'='*70}\n")
 
-                # Send DNS redirect to ROUTER_WAN_IP immediately
-                resp = make_dns_redirect_response(data, ROUTER_WAN_IP)
+                # Send DNS redirect to HOST_IP immediately so Ambi connects to Local Hub
+                resp = make_dns_redirect_response(data, HOST_IP)
                 if resp:
-                    hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {ROUTER_WAN_IP}")
+                    hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {HOST_IP}")
                     sock.sendto(resp, addr)
 
                 # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP
@@ -1357,9 +1397,9 @@ def run_dns():
             # Case A: Query comes from Ambi Climate device ONLY
             if is_from_ambi:
                 if is_ambi_exclusive or is_ambi_shared:
-                    resp = make_dns_redirect_response(data, ROUTER_WAN_IP)
+                    resp = make_dns_redirect_response(data, HOST_IP)
                     if resp:
-                        hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {ROUTER_WAN_IP}")
+                        hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {HOST_IP}")
                         sock.sendto(resp, addr)
                 else:
                     # Ambi device asking for external domain (e.g. NTP pool.ntp.org)
@@ -1570,23 +1610,35 @@ if __name__ == '__main__':
                 cmd = line.strip().upper()
                 if cmd == "1":
                     curr = get_cloud_server_setting()
-                    print(f"\n[INFO] Ambi Cloud Server (NCA): {curr}\n")
+                    print(f"\n[INFO] Target Ambi IP: {get_ambi_ip()} | Cloud Server (NCA): {curr}\n")
                 elif cmd == "2":
-                    change_cloud_server(f"{HOST_IP}:8867")
+                    if not get_ambi_ip():
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        change_cloud_server(f"{HOST_IP}:8867")
                 elif cmd == "3":
-                    change_cloud_server(f"{HOST_IP}:8866")
+                    if not get_ambi_ip():
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        change_cloud_server(f"{HOST_IP}:8866")
                 elif cmd == "4":
-                    res = send_ambi_cmd("NCD")
-                    res_str = res.decode('latin1', errors='ignore').strip() if res else "None"
-                    print(f"\n[INFO] Sent NCD -> {res_str}\n")
+                    if not get_ambi_ip():
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        res = send_ambi_cmd("NCD")
+                        res_str = res.decode('latin1', errors='ignore').strip() if res else "None"
+                        print(f"\n[INFO] Sent NCD -> {res_str}\n")
                 elif cmd == "5":
-                    t = send_ambi_cmd("NTP")
-                    h = send_ambi_cmd("NHM")
-                    t_str = t.decode('latin1', errors='ignore').strip() if t else "None"
-                    h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
-                    print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
+                    if not get_ambi_ip():
+                        print(f"\n[!] Ambi IP not yet detected. Waiting for connect DNS query...\n")
+                    else:
+                        t = send_ambi_cmd("NTP")
+                        h = send_ambi_cmd("NHM")
+                        t_str = t.decode('latin1', errors='ignore').strip() if t else "None"
+                        h_str = h.decode('latin1', errors='ignore').strip() if h else "None"
+                        print(f"\n[INFO] Sensors -> Temp: {t_str} | Hum: {h_str}\n")
                 elif cmd == "L":
-                    print("\n[*] Fetching Ambi System Dump Log (NSL)...")
+                    print(f"\n[*] Fetching Ambi System Dump Log (NSL) from {get_ambi_ip()}...")
                     log_content = fetch_ambi_system_log()
                     print("\n" + "=" * 70)
                     print(log_content)

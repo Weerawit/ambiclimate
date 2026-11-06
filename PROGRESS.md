@@ -492,6 +492,28 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
   * ตารางประวัติการทำงานของ AI และ Feedback ย้อนหลัง
   * ทำงานแบบ Asynchronous (AJAX fetch `/api/state`) ทุก 3 วินาที ลื่นไหลโดยไม่ต้อง Refresh หน้าเว็บ
 
+---
+
+## 24. การวินิจฉัยและแก้ไขข้อผิดพลาดใน Log (Error Diagnosis & Hardening)
+
+จากการตรวจสอบไฟล์ `hub_activity.log` และ `ambi_system_dump.log`:
+
+### สาเหตุของ Errors ที่พบ:
+1. **`TypeError: str, bytes or bytearray expected, not NoneType`**:
+   * **สาเหตุ:** ในขั้นตอนเริ่มต้น `AMBI_IP` มีค่าเป็น `None` จนกว่าเครื่อง Ambi จะส่ง DNS Query เข้ามา หากเปิด Web Dashboard หรือกดปุ่ม Console `[1]`, `[5]`, `[L]` ระบบจะพยายาม `socket.connect((None, 8070))` ส่งผลให้เกิด TypeError
+   * **การแก้ไข:** เพิ่ม Guard Clause `if not ip: return None` ในทุกฟังก์ชันคำสั่ง (`send_ambi_cmd`, `get_cloud_server_setting`, `change_cloud_server`, `fetch_ambi_system_log`, `send_daikin_ir`) ป้องกันการ Crash โดยเด็ดขาด
+2. **`HTTP/S :80 - code 400, message Bad request version`**:
+   * **สาเหตุ:** มีการส่ง TLS Client Hello เข้ามายัง HTTP Port 80 (Plain HTTP) ทำให้ `BaseHTTPRequestHandler` ไม่สามารถ Parse เวอร์ชัน HTTP ได้
+   * **การแก้ไข:** เพิ่ม Peek ตรวจจับ TLS (`0x16`) และตัดการเชื่อมต่อทันที พร้อมกรอง Error 400 ไม่ให้พ่นข้อความรกใน Log
+3. **`Error fetching system log: timed out` และ `No log data returned from device`**:
+   * **สาเหตุ:** เกิดความขัดแย้งของ Socket Port 8070 เมื่อ `poll_live_sensors` และ `fetch_ambi_system_log` พยายามเชื่อมต่อ Port 8070 พร้อมกันบนตัว Ambi ที่เป็น Single-Connection
+   * **การแก้ไข:**
+     * เพิ่ม Thread Lock `AMBI_PORT_8070_LOCK = threading.Lock()` ป้องกันการแย่งใช้งานพอร์ต 8070
+     * ขยาย Timeout ของคำสั่งดึง Log (NSL) เป็น 7.0 วินาที พร้อม Buffer Loop ที่เสถียร
+     * เพิ่ม `finally: s.close()` ใน `test_daikin.py` ป้องกัน Socket ค้าง
+4. **DNS Redirection & Cloud Targeting**:
+   * ปรับ DNS Redirection ชี้มาที่ `HOST_IP` (`192.168.1.138`) โดยตรงสำหรับโดเมน Ambi ทุกโดเมน
+
 
 
 

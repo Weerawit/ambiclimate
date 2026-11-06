@@ -293,10 +293,13 @@ def get_live_sensors(ip=None, port=8070, timeout=2.5):
                 sensors["wifi_quality"] = int(wq_raw)
             except ValueError:
                 sensors["wifi_quality"] = wq_raw
-
-        s.close()
     except Exception as e:
         sensors["error"] = str(e)
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
 
     return sensors
 
