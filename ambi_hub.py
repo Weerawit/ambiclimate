@@ -221,9 +221,9 @@ AC_STATE = {
     "luminosity": None,
     "humidex": None,
     "comfort_score": 0.0,
-    "comfort_label": "รอตรวจวัดสภาวะห้อง...",
+    "comfort_label": "รอข้อมูล Push จาก Ambi...",
     "comfort_badge_color": "#64748b",
-    "sensor_status": "Waiting for Ambi connect.* query...",
+    "sensor_status": "รอข้อมูล Push จาก Ambi (Passive Push Mode)",
     "sensor_time": None
 }
 
@@ -1016,10 +1016,22 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
         try:
             if body:
                 data = json.loads(body)
+                updated = False
                 if "temperature" in data:
-                    AC_STATE["room_temp"] = data["temperature"]
+                    AC_STATE["room_temp"] = float(data["temperature"])
+                    updated = True
                 if "humidity" in data:
-                    AC_STATE["room_humidity"] = data["humidity"]
+                    AC_STATE["room_humidity"] = float(data["humidity"])
+                    updated = True
+                if updated:
+                    AC_STATE["sensor_status"] = f"PUSH (HTTP POST :{self.server.server_port})"
+                    AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
+                    c = evaluate_comfort(AC_STATE.get("room_temp", 25.0), AC_STATE.get("room_humidity", 50.0))
+                    AC_STATE["humidex"] = c["humidex"]
+                    AC_STATE["comfort_score"] = c["score"]
+                    AC_STATE["comfort_label"] = c["label"]
+                    AC_STATE["comfort_badge_color"] = c["badge_color"]
+                    hub_log(f"[PUSH SENSOR HTTP] 📥 Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C")
         except Exception:
             pass
 
@@ -1540,6 +1552,38 @@ def run_cloud_mock(port):
                                 nsl_resp = b"\x07" + seq + b"0NSL0\r\n"
                                 active_sock.sendall(nsl_resp)
                                 hub_log(f"  [📡 AMBI TRAFFIC :{p}] 📤 SEND NSL ACK (0)")
+                            elif cmd == "NTP":
+                                payload = data[6:].decode('latin1', errors='ignore').strip('\r\n') if len(data) > 6 else ""
+                                if payload:
+                                    from test_daikin import parse_sensor_value
+                                    val, _ = parse_sensor_value(payload)
+                                    if val is not None:
+                                        AC_STATE["room_temp"] = val
+                                        AC_STATE["sensor_status"] = f"PUSH (Cloud :{p})"
+                                        AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
+                                        if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
+                                            c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
+                                            AC_STATE["humidex"] = c["humidex"]
+                                            AC_STATE["comfort_score"] = c["score"]
+                                            AC_STATE["comfort_label"] = c["label"]
+                                            AC_STATE["comfort_badge_color"] = c["badge_color"]
+                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 🌡️ Temperature: {val}°C (Port {p})")
+                            elif cmd == "NHM":
+                                payload = data[6:].decode('latin1', errors='ignore').strip('\r\n') if len(data) > 6 else ""
+                                if payload:
+                                    from test_daikin import parse_sensor_value
+                                    val, _ = parse_sensor_value(payload)
+                                    if val is not None:
+                                        AC_STATE["room_humidity"] = val
+                                        AC_STATE["sensor_status"] = f"PUSH (Cloud :{p})"
+                                        AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
+                                        if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
+                                            c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
+                                            AC_STATE["humidex"] = c["humidex"]
+                                            AC_STATE["comfort_score"] = c["score"]
+                                            AC_STATE["comfort_label"] = c["label"]
+                                            AC_STATE["comfort_badge_color"] = c["badge_color"]
+                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 💧 Humidity: {val}% (Port {p})")
                         else:
                             # Generic HTTP or raw response if needed
                             if b"HTTP" in data or b"GET" in data or b"POST" in data:
@@ -1581,8 +1625,9 @@ if __name__ == '__main__':
     # 4. Web UI Dashboard (8080)
     threading.Thread(target=run_http, args=(8080,), daemon=True).start()
 
-    # 5. Live Hardware Sensor Poller (TCP 8070 to Ambi Climate)
-    threading.Thread(target=poll_live_sensors, daemon=True).start()
+    # 5. Live Hardware Sensor Poller (TCP 8070 to Ambi Climate) - ปิดไว้ชั่วคราวเพื่อรอข้อมูล Push จาก Ambi
+    # threading.Thread(target=poll_live_sensors, daemon=True).start()
+    hub_log("[*] Live Sensor Polling is DISABLED (Waiting for Ambi Push Mode).")
 
     # 6. Hybrid Local Comfort AI Auto-Tuning Worker
     threading.Thread(target=auto_tuning_worker, daemon=True).start()
