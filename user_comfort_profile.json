@@ -1,5 +1,5 @@
 {
-  "auto_tune_enabled": false,
+  "auto_tune_enabled": true,
   "target_base_humidex": 26.0,
   "user_offset": 0.0,
   "min_temp": 22,
@@ -8,6 +8,16 @@
   "last_tune_time": 1793955337.1616492,
   "last_tune_action": "Cooled to 23°C (High)",
   "history": [
+    {
+      "time": "20:30:38",
+      "action": "Web UI Manual Control",
+      "temp": 24,
+      "fan": "Auto",
+      "power": "On",
+      "room_temp": null,
+      "room_humidity": null,
+      "result": "completeir,1:1,1"
+    },
     {
       "time": "15:57:04",
       "action": "Web UI Manual Control",
