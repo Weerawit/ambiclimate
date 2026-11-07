@@ -28,5 +28,8 @@ ambi_ip.txt
 user_comfort_profile.json
 ambi_data.db
 *.db
+*.db-wal
+*.db-shm
+data/
 GEMINI.md
 MEMORY.md

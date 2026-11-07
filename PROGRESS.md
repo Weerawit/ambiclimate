@@ -766,10 +766,33 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * ตรวจสอบตัวแปร `TZ`, ไฟล์ `/etc/timezone`, และ symlink `/etc/localtime` ของระบบปฏิบัติการ
    * สั่ง `time.tzset()` เพื่อบังคับให้ Runtime ของ Python ซิงค์เวลากับ Local Timezone ของเครื่องแม่ (Host OS) 100%
 2. **การปรับแต่ง Docker & Container Deployment:**
-   * เพิ่มการติดตั้งแพ็กเกจ `tzdata` ใน [`Dockerfile`](file:///mnt/c/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/Dockerfile)
-   * เพิ่ม Volume Mount `/etc/localtime:/etc/localtime:ro` และ `/etc/timezone:/etc/timezone:ro` พร้อมส่งผ่านตัวแปร `TZ=${TZ:-Asia/Bangkok}` ใน [`docker-compose.yml`](file:///mnt/c/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/docker-compose.yml)
+   * ใช้ `/etc/localtime:/etc/localtime:ro` และ `/etc/timezone:/etc/timezone:ro` พร้อมส่งผ่านตัวแปร `TZ=${TZ:-Asia/Bangkok}` ใน [`docker-compose.yml`](file:///mnt/c/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/docker-compose.yml) โดยตรง
 3. **ผลลัพธ์:**
    * ทุกบันทึกใน `hub_activity.log`, Console Log, SQLite `datetime_str`, และไทม์ไลน์หน้าเว็บจะแสดงเวลาท้องถิ่นตรงตาม OS เสมอ (เช่นเวลาประเทศไทย GMT+7) ไม่หลงไปเป็นเวลาสากล UTC อีกต่อไป
+
+---
+
+## 38. แก้ไขปัญหา Docker Volume Mount และ SQLite OperationalError (`unable to open database file`)
+
+1. **สาเหตุของปัญหา:**
+   * ใน `docker-compose.yml` เดิมมีการระบุ volume mount ไฟล์เดี่ยว `./ambi_data.db:/app/ambi_data.db`
+   * เนื่องจากไฟล์ `ambi_data.db` อยู่ใน `.gitignore` เมื่อนำโค้ดไปรันบน Raspberry Pi ตัวไฟล์ `ambi_data.db` ยังไม่เคยถูกสร้างขึ้นมาก่อน Docker daemon จึงสร้างชื่อ `ambi_data.db` เป็น **โฟลเดอร์ (Directory)** บนโฮสต์แทน
+   * เมื่อคอนเทนเนอร์เริ่มทำงานและ Python เรียก `sqlite3.connect('/app/ambi_data.db')` ตัว SQLite พยายามเปิดไดเรกทอรีเสมือนเป็นไฟล์ฐานข้อมูล จึงเกิดข้อผิดพลาด `sqlite3.OperationalError: unable to open database file`
+   * นอกจากนี้ ในโหมด SQLite WAL (`-wal`, `-shm`) การ mount โฟลเดอร์ที่เก็บฐานข้อมูลโดยเฉพาะถือเป็น Best Practice ของ Docker มากกว่าการ mount ไฟล์เดี่ยว
+
+2. **การแก้ไขและการปรับปรุง:**
+   * **`docker-compose.yml`:**
+     * เปลี่ยน Volume mount เป็นการ mount โฟลเดอร์ข้อมูล `./data:/app/data`
+     * กำหนด Environment Variable `DATABASE_PATH=/app/data/ambi_data.db`
+   * **`ambi_db.py`:**
+     * เพิ่มฟังก์ชันตัวช่วย `get_db_path(custom_path=None)` สำหรับค้นหาและสร้าง path ฐานข้อมูลอัตโนมัติ:
+       * รองรับการอ่าน `DATABASE_PATH` จาก environment variable
+       * หากปลายทางเป็นไดเรกทอรี (กรณี Docker เคยสร้างเป็นโฟลเดอร์ไว้) จะต่อท้ายด้วย `ambi_data.db` ข้างในโฟลเดอร์นั้นให้อัตโนมัติโดยไม่พัง
+       * ทำการ `os.makedirs(parent, exist_ok=True)` สร้างโฟลเดอร์ปลายทางให้อัตโนมัติทันที
+     * ปรับฟังก์ชันทุกตัวในโมดูลให้เรียกผ่าน `get_db_path(db_path)`
+   * **`.gitignore`:**
+     * เพิ่ม `data/`, `*.db-wal`, `*.db-shm` เพื่อป้องกันการ commit โฟลเดอร์ข้อมูลและไฟล์ล็อกของ SQLite เข้าสู่ git
+
 
 
 

@@ -44,7 +44,27 @@ def init_timezone():
 CURRENT_TIMEZONE = init_timezone()
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(DIR, "ambi_data.db")
+
+def get_db_path(custom_path=None):
+    """
+    Resolves the actual SQLite database file path.
+    Handles environment variables (DATABASE_PATH), directory mounts,
+    and automatically creates parent directories if needed.
+    """
+    target = custom_path or os.environ.get("DATABASE_PATH") or os.path.join(DIR, "ambi_data.db")
+    # If target is an existing directory (e.g. Docker mounted a directory to this path),
+    # place the db inside that directory
+    if os.path.isdir(target):
+        return os.path.join(target, "ambi_data.db")
+    parent = os.path.dirname(os.path.abspath(target))
+    if parent and not os.path.exists(parent):
+        try:
+            os.makedirs(parent, exist_ok=True)
+        except Exception:
+            pass
+    return target
+
+DB_FILE = get_db_path()
 
 _DB_LOCK = threading.Lock()
 _LAST_SENSOR_LOG_TIME = 0
@@ -52,7 +72,7 @@ _LAST_SENSOR_VALUES = (None, None)
 
 def get_connection(db_path=None):
     """Creates a connection to SQLite with WAL mode for safe multi-thread reads/writes."""
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     conn = sqlite3.connect(path, timeout=10.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -61,7 +81,7 @@ def get_connection(db_path=None):
 
 def init_db(db_path=None):
     """Initializes the database schema and indexes."""
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
@@ -125,7 +145,7 @@ def seed_initial_data_if_empty(db_path=None):
     """Backfills past actions from user_comfort_profile.json and seeds baseline 4-hour curve if empty."""
     import json
     import math
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
@@ -215,7 +235,7 @@ def seed_initial_data_if_empty(db_path=None):
 
 def load_comfort_profile(db_path=None):
     """Loads the active comfort profile from SQLite database."""
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
@@ -254,7 +274,7 @@ def load_comfort_profile(db_path=None):
 
 def save_comfort_profile(profile, db_path=None):
     """Saves comfort profile updates to SQLite database."""
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     now = time.time()
     with _DB_LOCK:
         conn = get_connection(path)
@@ -310,7 +330,7 @@ def record_sensor(temperature, humidity, luminosity=0, humidex=None, comfort_sco
     _LAST_SENSOR_VALUES = (round(temperature, 2), round(humidity, 2))
     dt_str = datetime.datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
 
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
@@ -336,7 +356,7 @@ def record_action(action_type, power, temperature=None, fan=None, swing=None, mo
     """Records an AC control action into the database."""
     now = time.time()
     dt_str = datetime.datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
 
     with _DB_LOCK:
         conn = get_connection(path)
@@ -367,7 +387,7 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
     """
     now = time.time()
     start_ts = now - (hours * 3600)
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
 
     with _DB_LOCK:
         conn = get_connection(path)
@@ -468,7 +488,7 @@ def get_timeline(limit=50, db_path=None):
     """
     Retrieves recent AC actions formatted as timeline items matching Ambi Climate app style.
     """
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
@@ -569,7 +589,7 @@ def check_thermal_drop(window_minutes=10, min_drop_c=0.35, db_path=None):
     """
     now = time.time()
     start_ts = now - (window_minutes * 60)
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
 
     with _DB_LOCK:
         conn = get_connection(path)
@@ -607,7 +627,7 @@ def check_thermal_rise(window_minutes=15, min_rise_c=0.8, min_temp_threshold=27.
     """
     now = time.time()
     start_ts = now - (window_minutes * 60)
-    path = db_path or DB_FILE
+    path = get_db_path(db_path)
 
     with _DB_LOCK:
         conn = get_connection(path)
