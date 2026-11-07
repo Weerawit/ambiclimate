@@ -879,6 +879,12 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            transition: border-color 0.15s ease;
+        }
+        .timeline-card-ai {
+            border: 1px solid rgba(0, 196, 180, 0.4) !important;
+            background: linear-gradient(180deg, rgba(0, 196, 180, 0.08) 0%, var(--surface-raised) 100%) !important;
+            box-shadow: 0 0 12px rgba(0, 196, 180, 0.08);
         }
         .timeline-card-top {
             display: flex;
@@ -890,6 +896,16 @@
             font-weight: 500;
             padding: 2px 6px;
             border-radius: 4px;
+        }
+        .ai-pill-tag {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: rgba(0, 196, 180, 0.22);
+            color: #00e5d4;
+            border: 1px solid rgba(0, 196, 180, 0.4);
         }
         .timeline-card-title {
             font-size: 12px;
@@ -2365,21 +2381,30 @@
                     html += `
                         <div class="timeline-group">
                             <div class="timeline-group-header">${dateGroup}</div>
-                            ${groupEvents.map(ev => `
+                            ${groupEvents.map(ev => {
+                                const isAI = ev.is_ai || ev.action_type === 'ai_tune' || (ev.badge && ev.badge.toLowerCase().includes('ai')) || (ev.trigger_reason && (ev.trigger_reason.includes('Auto-Tune') || ev.trigger_reason.includes('AI Adjust')));
+                                return `
                                 <div class="timeline-item-card">
                                     <div class="timeline-connector"></div>
-                                    <div class="timeline-icon-box" style="border-color: ${ev.color};">
-                                        <span style="font-size: 10px; color: ${ev.color};">&bull;</span>
+                                    <div class="timeline-icon-box" style="border-color: ${isAI ? '#00c4b4' : ev.color}; background-color: ${isAI ? 'rgba(0, 196, 180, 0.15)' : 'var(--surface-raised)'};">
+                                        <span style="font-size: 11px; ${isAI ? 'color: #00c4b4;' : ''}">${isAI ? '🤖' : (ev.icon || '&bull;')}</span>
                                     </div>
-                                    <div class="timeline-card-body">
+                                    <div class="timeline-card-body ${isAI ? 'timeline-card-ai' : ''}">
                                         <div class="timeline-card-top">
-                                            <span class="timeline-badge-pill" style="color: ${ev.color}; background-color: ${ev.color}18; border: 1px solid ${ev.color}33;">
-                                                ${ev.badge}
-                                            </span>
+                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                <span class="timeline-badge-pill" style="color: ${isAI ? '#00e5d4' : ev.color}; background-color: ${isAI ? 'rgba(0, 196, 180, 0.18)' : ev.color + '18'}; border: 1px solid ${isAI ? 'rgba(0, 196, 180, 0.4)' : ev.color + '33'};">
+                                                    ${isAI ? '🤖 AI Adjust' : ev.badge}
+                                                </span>
+                                                ${isAI ? '<span class="ai-pill-tag">AI SETTING</span>' : ''}
+                                            </div>
                                             <span style="font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums;">${ev.time_str} (${ev.relative_time})</span>
                                         </div>
-                                        <div class="timeline-card-title">${ev.title}</div>
-                                        ${ev.trigger_reason ? `<div class="timeline-card-reason">${ev.trigger_reason}</div>` : ''}
+                                        <div class="timeline-card-title" style="${isAI ? 'color: #00e5d4; font-weight: 600;' : ''}">${ev.title}</div>
+                                        ${ev.trigger_reason ? `
+                                            <div class="timeline-card-reason" style="${isAI ? 'color: #c2f5ee; background: rgba(0, 196, 180, 0.08); padding: 5px 8px; border-radius: 4px; border-left: 2px solid #00c4b4; margin-top: 4px;' : ''}">
+                                                ${isAI ? '<span style="font-weight: 600; color: #00e5d4;">AI ปรับจูน: </span>' : ''}${ev.trigger_reason}
+                                            </div>
+                                        ` : ''}
                                         ${(ev.room_temp || ev.room_humidity) ? `
                                             <div class="timeline-card-metrics">
                                                 ห้อง: <span style="color: var(--text-primary);">${ev.room_temp || '--'}°C</span> &bull; 
@@ -2394,7 +2419,7 @@
                                         ` : ''}
                                     </div>
                                 </div>
-                            `).join('')}
+                            `; }).join('')}
                         </div>
                     `;
                 }

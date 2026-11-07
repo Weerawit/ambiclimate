@@ -137,6 +137,21 @@ def init_db(db_path=None):
                         updated_at REAL NOT NULL
                     );
                 """)
+
+                # Auto-migrate any past misclassified AI actions
+                conn.execute("""
+                    UPDATE ac_actions 
+                    SET action_type = 'ai_tune' 
+                    WHERE action_type = 'manual_control' 
+                      AND (
+                        trigger_reason LIKE '%Auto-Tune%' 
+                        OR trigger_reason LIKE '%AI%' 
+                        OR trigger_reason LIKE '%หนาวไป%' 
+                        OR trigger_reason LIKE '%ร้อนไป%'
+                        OR trigger_reason LIKE '%Warmed%'
+                        OR trigger_reason LIKE '%Cooled%'
+                      );
+                """)
         finally:
             conn.close()
     seed_initial_data_if_empty(path)
@@ -550,11 +565,18 @@ def get_timeline(limit=50, db_path=None):
         fan = r["fan"]
         reason = r["trigger_reason"] or ""
 
-        if atype == 'ai_tune':
+        # Auto fallback: if trigger_reason mentions auto-tune/ai, classify as ai_tune
+        reason_l = reason.lower()
+        if atype == 'manual_control' and any(k in reason_l for k in ("auto-tune", "auto-tuning", "ai", "หนาวไป", "ร้อนไป", "warmed", "cooled")):
+            atype = 'ai_tune'
+
+        is_ai = (atype == 'ai_tune')
+
+        if is_ai:
             icon = "🤖"
-            badge = "AI Comfort"
+            badge = "AI Adjust"
             color = "#00c4b4"  # Ambi Teal
-            title = f"AI ปรับจูน: {temp}°C • พัดลม {fan}"
+            title = f"AI ปรับจูนอัตโนมัติ: {temp}°C • พัดลม {fan}"
         elif atype == 'thermal_sync':
             icon = "🔄"
             badge = "Smart State Sync"
@@ -601,7 +623,8 @@ def get_timeline(limit=50, db_path=None):
             "room_temp": r["room_temp"],
             "room_humidity": r["room_humidity"],
             "humidex": r["humidex"],
-            "result": r["result"]
+            "result": r["result"],
+            "is_ai": is_ai
         })
 
     return events

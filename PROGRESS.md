@@ -928,6 +928,19 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * **Modes Drawer (`drawerModes`):**
      * ปรับเป็นการ์ดแบบ `.mode-card` พร้อมแสงไฮไลท์สีเขียวมรกตแสดงโหมดที่กำลังทำงานอยู่แบบเรียลไทม์
 
+3. **การปรับปรุง Activity Timeline (ประวัติกิจกรรม) สำหรับ AI Adjust:**
+   * **การตรวจจับ AI Action Type (`ambi_hub.py`):**
+     * แก้ไข `send_daikin_ir()` ให้ตรวจจับคีย์เวิร์ดแบบ case-insensitive (`"ai"`, `"auto-tune"`, `"auto-tuning"`, `"warmed"`, `"cooled"`, `"comfort ai"`) เพื่อระบุ `act_type = "ai_tune"` อย่างถูกต้อง
+     * อัปเดต `auto_tuning_worker()` ให้ระบุเหตุผลแบบละเอียด เช่น `AI Adjust: รู้สึกร้อนเกินไป (Humidex 39.6°C, เป้าหมาย 26.0°C) -> ปรับลดเป็น 24°C (Auto)`
+   * **การประมวลผลและการจัดหมวดหมู่ในฐานข้อมูล (`ambi_db.py`):**
+     * เพิ่มการย้ายประเภทข้อมูลเก่า (Data Migration) ใน `init_db()` อัปเดตประวัติคำสั่งเดิมที่เป็น Auto-Tune ให้เป็น `ai_tune` อัตโนมัติ
+     * ใน `get_timeline()` ให้ติด Badge `AI Adjust` ไอคอน `🤖` สี Ambi Teal `#00c4b4` พร้อมหัวข้อ `AI ปรับจูนอัตโนมัติ` และแนบแฟล็ก `is_ai: true`
+   * **การแสดงผลในหน้า Web Dashboard (`web_dashboard.html`):**
+     * เพิ่มสไตล์ `.timeline-card-ai` พร้อมกรอบสี Teal และพื้นหลังไล่ระดับอ่อนๆ
+     * เพิ่มป้ายกำกับพิเศษ `AI SETTING` และ `🤖 AI Adjust` ชัดเจนในแท็บ "ประวัติกิจกรรม"
+     * แสดงบล็อกเหตุผลที่ AI ปรับจูน (Feels vs Target Humidex) ชัดเจนและอ่านง่ายตามแนวทางของคู่มือ Ambi Climate
+
+
 
 
 

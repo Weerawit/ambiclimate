@@ -858,13 +858,14 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
 
     # Record action to SQLite database
     act_type = "manual_control"
-    if any(k in reason for k in ("AI", "Auto-Tuning", "Warmed", "Cooled")):
-        act_type = "ai_tune"
-    elif "Feedback" in reason:
+    reason_lower = (reason or "").lower()
+    if "feedback" in reason_lower:
         act_type = "user_feedback"
-    elif "Mode" in reason:
+    elif any(k in reason_lower for k in ("ai", "auto-tune", "auto-tuning", "warmed", "cooled", "comfort ai")):
+        act_type = "ai_tune"
+    elif "mode" in reason_lower:
         act_type = "mode_change"
-    elif power is not None or "Power" in reason:
+    elif power is not None or "power" in reason_lower:
         act_type = "power"
 
     ambi_db.record_action(
@@ -950,10 +951,11 @@ def auto_tuning_worker():
                     new_fan = "Quiet"
 
                 if new_t != curr_ac_t or new_fan != AC_STATE.get("fan"):
-                    reason = f"Auto-Tune (หนาวไป: Feels {comfort['humidex']}°C)"
+                    target_hx = comfort.get("target_humidex", 26.0)
+                    reason = f"AI Adjust: รู้สึกหนาวเกินไป (Humidex {comfort['humidex']}°C, เป้าหมาย {target_hx}°C) -> ปรับเพิ่มเป็น {new_t}°C ({new_fan})"
                     send_daikin_ir(temp=new_t, fan=new_fan, reason=reason)
                     COMFORT_PROFILE["last_tune_time"] = now
-                    COMFORT_PROFILE["last_tune_action"] = f"Warmed to {new_t}°C ({new_fan})"
+                    COMFORT_PROFILE["last_tune_action"] = f"AI Adjust: Warmed to {new_t}°C ({new_fan})"
                     save_comfort_profile(COMFORT_PROFILE)
                     CONSECUTIVE_OUT_OF_BOUNDS = 0
 
@@ -969,10 +971,11 @@ def auto_tuning_worker():
                     new_fan = "High"
 
                 if new_t != curr_ac_t or new_fan != AC_STATE.get("fan"):
-                    reason = f"Auto-Tune (ร้อนไป: Feels {comfort['humidex']}°C)"
+                    target_hx = comfort.get("target_humidex", 26.0)
+                    reason = f"AI Adjust: รู้สึกร้อนเกินไป (Humidex {comfort['humidex']}°C, เป้าหมาย {target_hx}°C) -> ปรับลดเป็น {new_t}°C ({new_fan})"
                     send_daikin_ir(temp=new_t, fan=new_fan, reason=reason)
                     COMFORT_PROFILE["last_tune_time"] = now
-                    COMFORT_PROFILE["last_tune_action"] = f"Cooled to {new_t}°C ({new_fan})"
+                    COMFORT_PROFILE["last_tune_action"] = f"AI Adjust: Cooled to {new_t}°C ({new_fan})"
                     save_comfort_profile(COMFORT_PROFILE)
                     CONSECUTIVE_OUT_OF_BOUNDS = 0
 
