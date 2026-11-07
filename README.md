@@ -21,10 +21,10 @@ Revive and operate abandoned **Ambi Climate 2** hardware units locally without o
    - Transmits native 216-bit Daikin IR signals via the Ambi Climate's built-in Global Caché IR transmitter (Port `4998`).
 
 4. **Modern Responsive Web Dashboard:**
-   - Live real-time room metrics & Comfort Index at `http://localhost:8080`.
-   - 3 interactive AI teaching buttons: `🥶 หนาวไป`, `😊 สบายดี`, `🥵 ร้อนไป`.
-   - Full Daikin remote control panel.
-   - Ambi Cloud target manager (`NCA` query, `NCE` server change, `NCD` reconnect).
+   - Live real-time room metrics & Comfort Index at `http://localhost:9090` (or `http://192.168.1.199:9090`).
+   - Interactive AI comfort dials & teaching chips matching official Ambi Climate App manual.
+   - LED brightness slider & presets, manual on-demand sensor query, and background auto-polling.
+   - Full Daikin remote control panel and Cloud target manager (`NCA`, `NCE`, `NCD`).
 
 ---
 
@@ -35,12 +35,15 @@ Double-click `run_hub.bat` or run:
 ```bash
 python ambi_hub.py
 ```
-Access the dashboard at `http://localhost:8080`.
+Access the dashboard at `http://localhost:9090`.
 
-### Option B: Run with Docker Compose
+### Option B: Run on Raspberry Pi / Linux via Docker Compose
 ```bash
-docker compose up -d
+git clone https://github.com/Weerawit/ambiclimate.git
+cd ambiclimate
+sudo docker compose up -d --build
 ```
+Access the dashboard at `http://192.168.1.199:9090`.
 
 ---
 
@@ -48,11 +51,11 @@ docker compose up -d
 
 | Port | Protocol | Purpose |
 | :--- | :--- | :--- |
-| **8080** | HTTP | Modern Web Dashboard & REST APIs |
+| **9090** | HTTP | Modern Web Dashboard & REST APIs (`http://192.168.1.199:9090`) |
 | **8867** | TLS 1.2 TCP | Ambi Cloud Sync & Telemetry (`connect.smartambi.com`) |
 | **8866** | Plain TCP | Ambi Native Cloud Framing (`connect.ambiclimate.com`) |
-| **8070** | TCP | Ambi Native Hardware Telemetry (`NTP`, `NHM`, `NCA`, `NCE`) |
-| **4998** | TCP | Global Caché iTach IR Transmitter Engine |
+| **8070** | TCP | Ambi Native Hardware Telemetry (`NTP`, `NHM`, `NCA`, `NCE`, `NLL1`, `NLD`) |
+| **4998** | TCP | Global Caché iTach IR Transmitter Engine (Single connection) |
 | **53** | UDP | Local DNS Interceptor & Redirection |
 | **9131** | UDP | Global Caché AMX Beacon Multicast (`239.255.250.250`) |
 
