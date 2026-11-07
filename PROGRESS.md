@@ -966,6 +966,31 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
      * แสดงสถานะการชดเชยใน Devices Overview Drawer และ Device Settings Drawer
      * มีปุ่มปรับแต่ง offset ทั้งอุณหภูมิและเสกลความชื้น พร้อมแถบแสดงค่า Raw vs Calibrated แบบเรียลไทม์
 
+---
+
+## 30. ระบบกู้คืนและส่งคำสั่ง IR อัตโนมัติเมื่อตรวจพบ Ambi Climate บน Cloud Traffic (Pending IR Auto-Retry & Hardware Concurrency Protection)
+
+1. **ปัญหาที่ตรวจพบจาก Activity Log:**
+   * เมื่อผู้ใช้สั่งปิดแอร์หรือเปลี่ยนโหมด (`/api/mode?mode=Off`) แล้ว Ambi Climate อยู่ในช่วงหลุด Wi-Fi หรือเข้าโหมดพักประหยัดพลังงาน (เช่น ตอน `[11:26:07] Connect to 192.168.1.191:4998 timed out`)
+   * ต่อมาเมื่อ Ambi Climate เชื่อมต่อกลับเข้ามาที่ Cloud Mock Server (`TCP :8867`) ตอน `[11:26:48]` โดยส่งเฟรม `\x0701NPS\r\n` ตัว Ambi ฮาร์ดแวร์ตื่นเต็มที่แล้ว แต่คำสั่ง IR ที่สั่งไปก่อนหน้าได้ Timeout ไปแล้ว ทำให้แอร์ไม่ยอมปิดจริง
+
+2. **แนวทางการแก้ไขและพัฒนา (Hardened Architecture):**
+   * **Pending IR Command Queue:**
+     * เมื่อการส่งคำสั่ง IR บน Port 4998 ล้มเหลวครบทุกรอบ (3 Attempts) คำสั่งจะถูกนำไปต่อคิวในหน่วยความจำ (`PENDING_IR_COMMAND`) พร้อมพารามิเตอร์ครบชุด (คำสั่ง IR, โหมด, อุณหภูมิ, พัดลม, เหตุผล, IP)
+     * ไม่ทิ้งคำสั่งของผู้ใช้ และแสดงสถานะ `pending_ir` บนแดชบอร์ดด้วย Badge สีส้ม `⏳ กำลังรอส่งคำสั่งซ้ำ`
+   * **Automatic Recovery on Cloud Reconnect:**
+     * ทันทีที่ Ambi Climate เริ่มการเชื่อมต่อใหม่ (`s.accept()`) บนพอร์ต Cloud Mock (`TCP :8867` หรือ `TCP :8866`) หรือส่งเฟรมสัญญาณ (`NPS`, `NCO`, `NHS`, `NTP`, `NHM`) รวมถึงการยิงคำถาม DNS
+     * ฟังก์ชัน `check_and_flush_pending_ir()` จะทำงานเบื้องหลังทันทีเพื่อยิงคำสั่ง IR ที่ค้างอยู่ไปยัง Ambi Climate (`target_ip:4998`) ส่งผลให้แอร์ปิดหรือปรับอุณหภูมิตามที่สั่งไว้ทันทีอย่างแม่นยำ 100%
+   * **Microcontroller Hardware Concurrency Protection (`AMBI_HW_LOCK`):**
+     * ชิป Marvell 88MW300 บน Ambi Climate ใช้ lwIP Stack ขนาดเล็ก รองรับ TCP Socket พร้อมกันได้จำกัด
+     * รวม Lock การติดต่อพอร์ตฮาร์ดแวร์ทั้งหมด (`Port 8070` และ `Port 4998`) เข้าด้วยกัน เพื่อป้องกันไม่ให้การ Pull เซนเซอร์ชนกับการยิง IR Blaster
+   * **Immediate TCP Socket Recycling (`SO_LINGER`):**
+     * ตั้งค่า `SO_LINGER (l_onoff=1, l_linger=0)` ในทุก Socket ที่เชื่อมต่อไปยัง Ambi Climate (Port 8070 และ 4998)
+     * เมื่อปิดการเชื่อมต่อ ระบบจะส่ง TCP RST ทันที ทำให้ lwIP คืน TCP PCB ในหน่วยความจำทันทีโดยไม่ต้องรอสถานะ TIME-WAIT 2MSL
+   * **Sensor Polling Duration Optimization:**
+     * ปรับ `get_live_sensors(full_info=False)` ให้ดึงเฉพาะเซนเซอร์จำเป็น (`NTP`, `NHM`, `NLU`) ลดระยะเวลาการถือครอง Socket ลงจาก ~1.6 วินาที เหลือเพียง ~0.35 วินาที
+
+
 
 
 

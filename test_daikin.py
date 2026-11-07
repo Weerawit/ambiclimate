@@ -14,6 +14,7 @@ import ssl
 import re
 import select
 import subprocess
+import struct
 from daikin_ir import build_daikin_command, frames_to_sendir
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -210,7 +211,7 @@ def parse_sensor_value(raw_val: str):
         return float_val, unit_display
     return None, raw_val
 
-def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offset=4.0):
+def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offset=4.0, full_info=False):
     """
     Directly queries real-time temperature, humidity, luminosity, and hardware info
     from Ambi Climate 2 over TCP Port 8070 using the native Ambi Protocol.
@@ -233,6 +234,7 @@ def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offs
         "ip": target_ip,
         "raw": {}
     }
+    s = None
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(timeout)
@@ -241,7 +243,7 @@ def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offs
         def send_and_recv(cmd_str):
             pkt = b"\x0700" + cmd_str.encode("ascii") + b"\r"
             s.sendall(pkt)
-            time.sleep(0.2)
+            time.sleep(0.12)
             data = s.recv(512)
             # Response format: \x07 + "000" + 'N' + code(2) + payload + \r\n
             if data and len(data) >= 7 and data[0] == 7:
@@ -271,42 +273,42 @@ def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offs
             sensors["raw"]["NLU"] = l_raw
             sensors["luminosity"] = l_raw
 
-        # Query Unique ID
-        id_raw = send_and_recv("NID")
-        if id_raw:
-            sensors["raw"]["NID"] = id_raw
-            sensors["device_id"] = id_raw
+        # Only query slow/static hardware info if requested
+        if full_info:
+            id_raw = send_and_recv("NID")
+            if id_raw:
+                sensors["raw"]["NID"] = id_raw
+                sensors["device_id"] = id_raw
 
-        # Query Firmware Version
-        fv_raw = send_and_recv("NFV")
-        if fv_raw:
-            sensors["raw"]["NFV"] = fv_raw
-            sensors["firmware"] = fv_raw
+            fv_raw = send_and_recv("NFV")
+            if fv_raw:
+                sensors["raw"]["NFV"] = fv_raw
+                sensors["firmware"] = fv_raw
 
-        # Query Uptime
-        ut_raw = send_and_recv("NUT")
-        if ut_raw:
-            sensors["raw"]["NUT"] = ut_raw
-            try:
-                sensors["uptime"] = int(ut_raw)
-            except ValueError:
-                sensors["uptime"] = ut_raw
+            ut_raw = send_and_recv("NUT")
+            if ut_raw:
+                sensors["raw"]["NUT"] = ut_raw
+                try:
+                    sensors["uptime"] = int(ut_raw)
+                except ValueError:
+                    sensors["uptime"] = ut_raw
 
-        # Query Wifi Quality
-        wq_raw = send_and_recv("NWQ")
-        if wq_raw:
-            sensors["raw"]["NWQ"] = wq_raw
-            try:
-                sensors["wifi_quality"] = int(wq_raw)
-            except ValueError:
-                sensors["wifi_quality"] = wq_raw
+            wq_raw = send_and_recv("NWQ")
+            if wq_raw:
+                sensors["raw"]["NWQ"] = wq_raw
+                try:
+                    sensors["wifi_quality"] = int(wq_raw)
+                except ValueError:
+                    sensors["wifi_quality"] = wq_raw
     except Exception as e:
         sensors["error"] = str(e)
     finally:
-        try:
-            s.close()
-        except Exception:
-            pass
+        if s:
+            try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                s.close()
+            except Exception:
+                pass
 
     return sensors
 

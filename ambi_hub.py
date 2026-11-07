@@ -191,7 +191,137 @@ from test_daikin import save_ambi_ip, is_valid_ambi
 AMBI_IP = None
 AMBI_READY_EVENT = threading.Event()
 AMBI_AUTO_RETARGETED = False
-AMBI_PORT_8070_LOCK = threading.Lock()
+AMBI_HW_LOCK = threading.Lock()
+AMBI_PORT_8070_LOCK = AMBI_HW_LOCK
+
+# Pending IR Command Queue (Auto-retry when Ambi reconnects or shows Cloud Traffic)
+PENDING_IR_LOCK = threading.Lock()
+PENDING_IR_COMMAND = None
+_DISPATCHING_PENDING = False
+
+def queue_pending_ir(cmd, reason, target_power, target_temp, target_fan, target_mode, target_ip):
+    global PENDING_IR_COMMAND
+    with PENDING_IR_LOCK:
+        PENDING_IR_COMMAND = {
+            "cmd": cmd,
+            "reason": reason,
+            "target_power": target_power,
+            "target_temp": target_temp,
+            "target_fan": target_fan,
+            "target_mode": target_mode,
+            "target_ip": target_ip,
+            "timestamp": time.time(),
+            "attempts": 0
+        }
+        hub_log(f"[⏳ IR QUEUED] ({reason}) Target {target_ip}:4998 unreachable. Command queued for automatic re-dispatch on Cloud Traffic (:8867/8866).")
+
+def clear_pending_ir():
+    global PENDING_IR_COMMAND
+    with PENDING_IR_LOCK:
+        if PENDING_IR_COMMAND:
+            PENDING_IR_COMMAND = None
+
+def get_pending_ir_status():
+    with PENDING_IR_LOCK:
+        if not PENDING_IR_COMMAND:
+            return None
+        return dict(PENDING_IR_COMMAND)
+
+def check_and_flush_pending_ir(client_ip=None):
+    global PENDING_IR_COMMAND, _DISPATCHING_PENDING
+    with PENDING_IR_LOCK:
+        if not PENDING_IR_COMMAND or _DISPATCHING_PENDING:
+            return
+        if client_ip and client_ip.startswith("192.168."):
+            PENDING_IR_COMMAND["target_ip"] = client_ip
+        _DISPATCHING_PENDING = True
+
+    def dispatch_worker():
+        global PENDING_IR_COMMAND, _DISPATCHING_PENDING
+        try:
+            time.sleep(0.4)  # Allow current cloud handshake/ACK packet to settle
+            with PENDING_IR_LOCK:
+                pending = dict(PENDING_IR_COMMAND) if PENDING_IR_COMMAND else None
+            if not pending:
+                return
+
+            cmd = pending["cmd"]
+            reason = pending["reason"]
+            target_ip = pending.get("target_ip") or get_ambi_ip()
+            power = pending.get("target_power")
+            temp = pending.get("target_temp")
+            fan = pending.get("target_fan")
+            mode = pending.get("target_mode")
+
+            hub_log(f"[🚀 AUTO-RETRY PENDING IR] Detected Ambi activity from {target_ip}. Flushing queued command ({reason})...")
+
+            success = False
+            ir_resp = ""
+            with AMBI_HW_LOCK:
+                for attempt in range(3):
+                    s = None
+                    try:
+                        s = socket.create_connection((target_ip, 4998), timeout=3.5)
+                        s.sendall(cmd.encode('ascii'))
+                        ir_resp = s.recv(256).decode('ascii', errors='ignore').strip()
+                        hub_log(f"[IR TRANSMIT DAIKIN (QUEUED RECOVERY)] ({reason}) [Target {target_ip}:4998] Target={temp}°C Fan={fan} Power={power} -> {ir_resp}")
+                        success = True
+                        break
+                    except Exception as e:
+                        ir_resp = f"Error: {e}"
+                        hub_log(f"[IR QUEUED RETRY #{attempt+1}] Attempt failed: {e}")
+                        time.sleep(0.4)
+                    finally:
+                        if s:
+                            try:
+                                s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                                s.close()
+                            except Exception:
+                                pass
+
+            if success:
+                clear_pending_ir()
+                hub_log(f"[✅ PENDING IR RESOLVED] Successfully delivered queued command to Ambi Climate ({target_ip}:4998)!")
+                entry = {
+                    "time": time.strftime('%H:%M:%S'),
+                    "action": f"Recovery: {reason}",
+                    "temp": temp,
+                    "fan": fan,
+                    "power": power,
+                    "room_temp": AC_STATE.get('room_temp'),
+                    "room_humidity": AC_STATE.get('room_humidity'),
+                    "result": ir_resp
+                }
+                history = COMFORT_PROFILE.get("history", [])
+                history.insert(0, entry)
+                COMFORT_PROFILE["history"] = history[:25]
+                save_comfort_profile(COMFORT_PROFILE)
+
+                ambi_db.record_action(
+                    action_type="ir_recovery",
+                    power=power,
+                    temperature=temp,
+                    fan=fan,
+                    swing=AC_STATE.get('swing', 'Auto'),
+                    mode=mode,
+                    trigger_reason=f"Recovery after reconnect: {reason}",
+                    room_temp=AC_STATE.get('room_temp'),
+                    room_humidity=AC_STATE.get('room_humidity'),
+                    humidex=AC_STATE.get('humidex'),
+                    result=ir_resp
+                )
+            else:
+                with PENDING_IR_LOCK:
+                    if PENDING_IR_COMMAND:
+                        PENDING_IR_COMMAND["attempts"] += 1
+                        if PENDING_IR_COMMAND["attempts"] >= 5 or (time.time() - PENDING_IR_COMMAND["timestamp"] > 600):
+                            hub_log(f"[❌ PENDING IR EXPIRED] Dropping queued IR command after {PENDING_IR_COMMAND['attempts']} attempts / timeout.")
+                            PENDING_IR_COMMAND = None
+        finally:
+            with PENDING_IR_LOCK:
+                _DISPATCHING_PENDING = False
+
+    threading.Thread(target=dispatch_worker, daemon=True).start()
 
 def get_cached_ambi_ip():
     cache_file = os.path.join(DIR, "ambi_ip.txt")
@@ -235,6 +365,9 @@ def update_ambi_ip(new_ip, source=""):
         # Trigger Green LED immediately in background
         threading.Thread(target=set_ambi_led_green, args=(new_ip,), daemon=True).start()
 
+    # If any IR command was waiting for reconnect, trigger flush
+    check_and_flush_pending_ir(new_ip)
+
 def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
     """Sends framed command to Ambi on Port 8070 and returns the raw response."""
     ip = target_ip or get_ambi_ip()
@@ -244,6 +377,7 @@ def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
     seq = "01"
     packet = b"\x07" + seq.encode('ascii') + cmd_text.encode('latin1') + b"\r"
     with AMBI_PORT_8070_LOCK:
+        s = None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(timeout)
@@ -251,11 +385,17 @@ def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
             s.sendall(packet)
             time.sleep(0.15)
             resp = s.recv(2048)
-            s.close()
             return resp
         except Exception as e:
             hub_log(f"[-] Command to Ambi ({cmd_text} -> {ip}:{port}) failed: {e}")
             return None
+        finally:
+            if s:
+                try:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                    s.close()
+                except Exception:
+                    pass
 
 _CLOUD_SETTING_CACHE = {"value": None, "timestamp": 0}
 
@@ -334,6 +474,7 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
         return "Ambi IP not yet acquired. Waiting for Ambi to send DNS connect query..."
     hub_log(f"[*] Fetching Ambi System Log from {ip}:8070 (NSL)...")
     with AMBI_PORT_8070_LOCK:
+        s = None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(timeout)
@@ -354,7 +495,6 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
                     chunks.append(data)
                 except socket.timeout:
                     break
-            s.close()
             raw = b"".join(chunks)
             if raw:
                 text = raw.decode("utf-8", errors="replace")
@@ -369,6 +509,13 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
         except Exception as e:
             hub_log(f"[-] Error fetching system log from {ip}: {e}")
             return f"Error connecting to Ambi on {ip}:8070 -> {e}"
+        finally:
+            if s:
+                try:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                    s.close()
+                except Exception:
+                    pass
 
 
 def set_ambi_led_green(target_ip=None, brightness=None):
@@ -385,6 +532,7 @@ def set_ambi_led_green(target_ip=None, brightness=None):
     b_val = brightness if brightness is not None else AC_STATE.get("led_brightness", 5700)
     hub_log(f"[*] Setting Ambi Climate LED to SOLID GREEN ({b_val} PWM) on {ip}:8070...")
     with AMBI_PORT_8070_LOCK:
+        s = None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(3.0)
@@ -423,13 +571,19 @@ def set_ambi_led_green(target_ip=None, brightness=None):
             try: s.recv(256)
             except Exception: pass
 
-            s.close()
             AC_STATE["led_status"] = "ON"
             hub_log(f"✅ [🟢 LED ACTIVATED] Ambi Climate ({ip}) front LED is now SOLID GREEN at {b_val} PWM!")
             return True
         except Exception as e:
             hub_log(f"[-] Error setting LED to Green on {ip}: {e}")
             return False
+        finally:
+            if s:
+                try:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                    s.close()
+                except Exception:
+                    pass
 
 def set_ambi_led_brightness(level: int, target_ip=None):
     """
@@ -445,6 +599,7 @@ def set_ambi_led_brightness(level: int, target_ip=None):
     AC_STATE["led_brightness"] = level
     hub_log(f"[*] Setting Ambi Climate LED brightness to {level} on {ip}:8070...")
     with AMBI_PORT_8070_LOCK:
+        s = None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(3.0)
@@ -471,7 +626,6 @@ def set_ambi_led_brightness(level: int, target_ip=None):
                     time.sleep(0.08)
                     try: s.recv(256)
                     except Exception: pass
-                s.close()
                 hub_log(f"✅ [💡 LED OFF] Ambi Climate ({ip}) front LED is now turned OFF.")
             else:
                 s.sendall(b"\x0700NSD\r")
@@ -505,13 +659,19 @@ def set_ambi_led_brightness(level: int, target_ip=None):
                 try: s.recv(256)
                 except Exception: pass
 
-                s.close()
                 pct = round(level / 100)
                 hub_log(f"✅ [💡 LED BRIGHTNESS] Ambi Climate ({ip}) LED brightness set to {level} ({pct}%) Green.")
             return True
         except Exception as e:
             hub_log(f"[-] Error setting LED brightness on {ip}: {e}")
             return False
+        finally:
+            if s:
+                try:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                    s.close()
+                except Exception:
+                    pass
 
 def query_live_sensors(target_ip=None):
     """
@@ -820,41 +980,62 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
     )
     cmd = daikin_ir.frames_to_sendir(f1, f2, connector="1:1")
 
-    # Connect with auto-retry and re-discovery if refused/timed out
-    for attempt in range(2):
-        try:
-            s = socket.create_connection((target_ip, 4998), timeout=3.0)
-            s.sendall(cmd.encode('ascii'))
-            ir_resp = s.recv(256).decode('ascii', errors='ignore').strip()
-            hub_log(f"[IR TRANSMIT DAIKIN] ({reason}) [Target {target_ip}:4998] Target={AC_STATE['temperature']}°C Fan={AC_STATE['fan']} Power={AC_STATE['power']} -> {ir_resp}")
-            break
-        except Exception as e:
-            ir_resp = f"Error: {e}"
-            if s:
-                try:
-                    s.close()
-                except Exception:
-                    pass
-                s = None
+    # Connect with auto-retry and re-discovery if refused/timed out, protected by AMBI_HW_LOCK
+    is_success = False
+    with AMBI_HW_LOCK:
+        for attempt in range(3):
+            try:
+                s = socket.create_connection((target_ip, 4998), timeout=3.0)
+                s.sendall(cmd.encode('ascii'))
+                ir_resp = s.recv(256).decode('ascii', errors='ignore').strip()
+                hub_log(f"[IR TRANSMIT DAIKIN] ({reason}) [Target {target_ip}:4998] Target={AC_STATE['temperature']}°C Fan={AC_STATE['fan']} Power={AC_STATE['power']} -> {ir_resp}")
+                is_success = True
+                clear_pending_ir()
+                break
+            except Exception as e:
+                ir_resp = f"Error: {e}"
+                if s:
+                    try:
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                        s.close()
+                    except Exception:
+                        pass
+                    s = None
 
-            if attempt == 0:
-                hub_log(f"[IR RETRY] ({reason}) Connect to {target_ip}:4998 failed ({e}). Re-discovering Ambi IP...")
-                from test_daikin import discover_ambi_ip
-                fresh_ip = discover_ambi_ip()
-                if fresh_ip and fresh_ip != target_ip:
-                    hub_log(f"[IR RETRY] Detected Ambi IP moved to: {fresh_ip} (was {target_ip})")
-                    target_ip = fresh_ip
-                    update_ambi_ip(fresh_ip, source="Re-Discovery on Refuse")
-                time.sleep(0.4)
-            else:
-                hub_log(f"[IR TRANSMIT ERROR] ({reason}) Target {target_ip}:4998 -> {e}")
-        finally:
-            if s:
-                try:
-                    s.close()
-                except Exception:
-                    pass
-                s = None
+                if attempt == 0:
+                    hub_log(f"[IR RETRY] ({reason}) Connect to {target_ip}:4998 failed ({e}). Re-discovering Ambi IP...")
+                    from test_daikin import discover_ambi_ip
+                    fresh_ip = discover_ambi_ip()
+                    if fresh_ip and fresh_ip != target_ip:
+                        hub_log(f"[IR RETRY] Detected Ambi IP moved to: {fresh_ip} (was {target_ip})")
+                        target_ip = fresh_ip
+                        update_ambi_ip(fresh_ip, source="Re-Discovery on Refuse")
+                    time.sleep(0.3)
+                elif attempt == 1:
+                    hub_log(f"[IR RETRY #2] ({reason}) Retrying target {target_ip}:4998 after wait...")
+                    time.sleep(0.5)
+                else:
+                    hub_log(f"[IR TRANSMIT ERROR] ({reason}) Target {target_ip}:4998 -> {e}")
+            finally:
+                if s:
+                    try:
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                        s.close()
+                    except Exception:
+                        pass
+                    s = None
+
+    if not is_success:
+        # All immediate attempts failed - queue command for automatic re-dispatch as soon as Ambi reconnects to Cloud
+        queue_pending_ir(
+            cmd=cmd,
+            reason=reason,
+            target_power=AC_STATE['power'],
+            target_temp=AC_STATE['temperature'],
+            target_fan=AC_STATE['fan'],
+            target_mode=AC_STATE['mode'],
+            target_ip=target_ip
+        )
 
     # Record event in history
     entry = {
@@ -1286,7 +1467,10 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="font-size: 14px; font-weight: 700; color: #fff;">📡 แอร์ Daikin (ARC480A46)</span>
-                <span id="powerBadge" class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">COOL</span>
+                <div>
+                    <span id="pendingBadge" style="display: none; background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 11px; padding: 3px 8px; border-radius: 6px; margin-right: 6px; font-weight: 600;">⏳ กำลังรอส่งคำสั่งซ้ำ</span>
+                    <span id="powerBadge" class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">COOL</span>
+                </div>
             </div>
 
             <div class="temp-display" id="targetTemp">24°C</div>
@@ -1415,6 +1599,18 @@ WEB_DASHBOARD_HTML = r"""<!DOCTYPE html>
                 // 4. AC Controls
                 const pwr = data.ac_state.power;
                 document.getElementById('targetTemp').innerText = data.ac_state.temperature + '°C';
+
+                // Pending IR Badge
+                const pendBadge = document.getElementById('pendingBadge');
+                if (pendBadge) {
+                    if (data.pending_ir) {
+                        pendBadge.style.display = 'inline-block';
+                        pendBadge.innerText = '⏳ รอกระตุ้น IR (' + (data.pending_ir.reason || 'Pending') + ')';
+                    } else {
+                        pendBadge.style.display = 'none';
+                    }
+                }
+
                 const pwrBadge = document.getElementById('powerBadge');
                 if (pwr.toLowerCase() === 'off') {
                     pwrBadge.innerText = 'OFF';
@@ -1732,7 +1928,8 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                     "last_tune_action": COMFORT_PROFILE.get("last_tune_action", ""),
                     "history": COMFORT_PROFILE.get("history", [])[:10]
                 },
-                "cooldown_remaining_sec": remaining_cooldown
+                "cooldown_remaining_sec": remaining_cooldown,
+                "pending_ir": get_pending_ir_status()
             }
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -2260,6 +2457,9 @@ def run_dns():
                     hub_log(f"[DNS REDIRECT 🎯] {domain} (qtype={qtype}) from Ambi ({client_ip}) -> {DNS_REDIRECT_IP}")
                     sock.sendto(resp, addr)
 
+                # Check and flush any queued IR command now that Ambi is alive and querying DNS
+                check_and_flush_pending_ir(client_ip)
+
                 # Requirement 2: Automatically shoot NCE to set Cloud Server to our IP & maintain Green LED
                 def auto_set_cloud_worker(target_ip):
                     time.sleep(0.6)  # Allow DNS response to complete
@@ -2355,6 +2555,7 @@ def run_cloud_mock(port):
             conn, addr = s.accept()
             update_ambi_ip(addr[0], source=f"Cloud TCP :{port}")
             hub_log(f"\n[🎉 AMBI CLIMATE CONNECTED TO CLOUD PORT {port}! from {addr[0]}:{addr[1]}]")
+            check_and_flush_pending_ir(addr[0])
 
             def handle_client(c, a, p, ctx):
                 c.settimeout(180.0)
@@ -2492,6 +2693,9 @@ def run_cloud_mock(port):
                                                 source=f"cloud_{p}"
                                             )
                                         hub_log(f"  [📡 AMBI SENSOR PUSH] 💧 Humidity: {AC_STATE['room_humidity']}% (Raw: {val}%, {h_calib:+}%) (Port {p})")
+
+                            # Flush any pending queued IR command now that Ambi is confirmed alive & communicating
+                            check_and_flush_pending_ir(a[0])
                         else:
                             # Generic HTTP or raw response if needed
                             if b"HTTP" in data or b"GET" in data or b"POST" in data:
