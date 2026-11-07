@@ -953,6 +953,20 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
      * มีปุ่มเลือก Preset ชดเชยด่วน (`-2.0°C`, `-1.5°C`, `-1.0°C`, `-0.5°C`, `0.0°C`)
      * แสดงเปรียบเทียบค่าที่อ่านได้จริงจากฮาร์ดแวร์ Ambi กับค่าที่แสดงผลจริงในห้องแบบเรียลไทม์
 
+4. **Sensor Calibration Offset (-3.0°C / +4%):**
+   * **ค่ามาตรฐานตั้งต้น (Default Offsets):**
+     * อุณหภูมิ: `-3.0°C` (ชดเชยความร้อนสะสมภายในตัวเครื่อง Ambi Climate 2)
+     * ความชื้น: `+4.0%` (ชดเชยเซนเซอร์ความชื้น)
+   * **การคำนวณในระดับระบบและฐานข้อมูล:**
+     * `test_daikin.py`: `get_live_sensors()` คำนวณค่า Calibrated ให้ทันที พร้อมเก็บ `raw_temperature` และ `raw_humidity`
+     * `ambi_db.py`: เพิ่มคอลัมน์ `temp_calibration_offset` และ `humidity_calibration_offset` ในตาราง `comfort_profile` พร้อม auto-migrate ข้อมูลเดิม
+     * `ambi_hub.py`: ทั้งการ Pull ผ่าน Port 8070 และ Cloud Push จะปรับเทียบอุณหภูมิและความชื้นก่อนคำนวณ Humidex และบันทึกลงฐานข้อมูล SQLite
+     * API: รองรับ `/api/settings/calibration` และ `/api/sensors/calibration` ปรับแต่ง offset ได้แบบไดนามิก
+   * **การแสดงผลบนแดชบอร์ด (`web_dashboard.html`):**
+     * แสดงสถานะการชดเชยใน Devices Overview Drawer และ Device Settings Drawer
+     * มีปุ่มปรับแต่ง offset ทั้งอุณหภูมิและเสกลความชื้น พร้อมแถบแสดงค่า Raw vs Calibrated แบบเรียลไทม์
+
+
 
 
 

@@ -210,16 +210,21 @@ def parse_sensor_value(raw_val: str):
         return float_val, unit_display
     return None, raw_val
 
-def get_live_sensors(ip=None, port=8070, timeout=2.5):
+def get_live_sensors(ip=None, port=8070, timeout=2.5, temp_offset=-3.0, hum_offset=4.0):
     """
     Directly queries real-time temperature, humidity, luminosity, and hardware info
     from Ambi Climate 2 over TCP Port 8070 using the native Ambi Protocol.
-    Returns a dict with live readings.
+    Applies hardware sensor calibration offsets (-3.0°C / +4%).
+    Returns a dict with live calibrated readings and raw sensor values.
     """
     target_ip = ip or get_ambi_ip()
     sensors = {
         "temperature": None,
         "humidity": None,
+        "raw_temperature": None,
+        "raw_humidity": None,
+        "temp_calibration_offset": temp_offset,
+        "humidity_calibration_offset": hum_offset,
         "luminosity": None,
         "device_id": None,
         "firmware": None,
@@ -249,14 +254,16 @@ def get_live_sensors(ip=None, port=8070, timeout=2.5):
         if t_raw:
             sensors["raw"]["NTP"] = t_raw
             val, _ = parse_sensor_value(t_raw)
-            sensors["temperature"] = val
+            sensors["raw_temperature"] = val
+            sensors["temperature"] = round(val + temp_offset, 2) if (val is not None and temp_offset is not None) else val
 
         # Query Humidity
         h_raw = send_and_recv("NHM")
         if h_raw:
             sensors["raw"]["NHM"] = h_raw
             val, _ = parse_sensor_value(h_raw)
-            sensors["humidity"] = val
+            sensors["raw_humidity"] = val
+            sensors["humidity"] = round(min(100.0, max(0.0, val + hum_offset)), 2) if (val is not None and hum_offset is not None) else val
 
         # Query Luminosity
         l_raw = send_and_recv("NLU")
@@ -515,8 +522,8 @@ def probe_sensors_and_ports():
             print(f"    [-] Error querying sensors: {live['error']}")
         else:
             print("    [+] SENSOR READINGS RECEIVED SUCCESSFULLY:")
-            print(f"        * Temperature   : {live['temperature']} °C (raw: {live['raw'].get('NTP')})")
-            print(f"        * Humidity      : {live['humidity']} % (raw: {live['raw'].get('NHM')})")
+            print(f"        * Temperature   : {live['temperature']} °C (raw: {live.get('raw_temperature')} °C, offset: {live.get('temp_calibration_offset'):+}°C)")
+            print(f"        * Humidity      : {live['humidity']} % (raw: {live.get('raw_humidity')} %, offset: {live.get('humidity_calibration_offset'):+}%)")
             print(f"        * Luminosity    : {live['luminosity']} (raw: {live['raw'].get('NLU')})")
             print(f"        * Device ID     : {live['device_id']}")
             print(f"        * Firmware Ver  : {live['firmware']}")

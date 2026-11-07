@@ -524,14 +524,24 @@ def query_live_sensors(target_ip=None):
         hub_log("[-] Cannot query sensors: Ambi IP not yet acquired.")
         return {"status": "Error", "message": "Ambi IP not yet acquired"}
 
+    t_calib = float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0))
+    h_calib = float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0))
+
     hub_log(f"[*] Querying live sensors on-demand from {ip}:8070...")
     with AMBI_PORT_8070_LOCK:
-        live = get_live_sensors(ip, port=8070, timeout=3.5)
+        live = get_live_sensors(ip, port=8070, timeout=3.5, temp_offset=t_calib, hum_offset=h_calib)
+
+    raw_t = live.get("raw_temperature", live.get("temperature"))
+    raw_h = live.get("raw_humidity", live.get("humidity"))
 
     if live.get("temperature") is not None:
+        AC_STATE["room_temp_raw"] = raw_t
         AC_STATE["room_temp"] = live["temperature"]
     if live.get("humidity") is not None:
+        AC_STATE["room_humidity_raw"] = raw_h
         AC_STATE["room_humidity"] = live["humidity"]
+    AC_STATE["temp_calibration_offset"] = t_calib
+    AC_STATE["humidity_calibration_offset"] = h_calib
     if live.get("luminosity"):
         AC_STATE["luminosity"] = live["luminosity"]
 
@@ -640,6 +650,7 @@ AC_STATE = {
     "room_temp": None,
     "room_temp_raw": None,
     "room_humidity": None,
+    "room_humidity_raw": None,
     "luminosity": None,
     "humidex": None,
     "comfort_score": 0.0,
@@ -647,7 +658,8 @@ AC_STATE = {
     "comfort_badge_color": "#10b981",
     "sensor_status": "Auto Pull Active (TCP :8070)",
     "sensor_time": None,
-    "temp_calibration_offset": 0.0,
+    "temp_calibration_offset": -3.0,
+    "humidity_calibration_offset": 4.0,
     "led_brightness": 10000,
     "led_status": "ON"
 }
@@ -659,7 +671,8 @@ DEFAULT_COMFORT_PROFILE = {
     "auto_tune_enabled": True,
     "target_base_humidex": 26.0,
     "user_offset": 0.0,
-    "temp_calibration_offset": 0.0,
+    "temp_calibration_offset": -3.0,
+    "humidity_calibration_offset": 4.0,
     "min_temp": 22,
     "max_temp": 27,
     "cooldown_minutes": 10,
@@ -1007,23 +1020,27 @@ def poll_live_sensors(interval=20):
                 time.sleep(2)
                 continue
 
+            t_calib = float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0))
+            h_calib = float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0))
+
             with AMBI_PORT_8070_LOCK:
-                live = get_live_sensors(target_ip, port=8070, timeout=3.5)
+                live = get_live_sensors(target_ip, port=8070, timeout=3.5, temp_offset=t_calib, hum_offset=h_calib)
 
             if live.get("temperature") is not None and live.get("humidity") is not None:
                 AMBI_READY_EVENT.set()
                 update_ambi_ip(target_ip, source="Sensor Poller")
 
-                raw_t = live["temperature"]
-                raw_h = live["humidity"]
-                calib_offset = float(COMFORT_PROFILE.get("temp_calibration_offset", 0.0))
-                calibrated_t = round(raw_t + calib_offset, 2)
+                raw_t = live.get("raw_temperature", live["temperature"])
+                raw_h = live.get("raw_humidity", live["humidity"])
+                calibrated_t = live["temperature"]
+                calibrated_h = live["humidity"]
 
                 AC_STATE["room_temp_raw"] = raw_t
                 AC_STATE["room_temp"] = calibrated_t
                 AC_STATE["room_humidity_raw"] = raw_h
-                AC_STATE["room_humidity"] = raw_h
-                AC_STATE["temp_calibration_offset"] = calib_offset
+                AC_STATE["room_humidity"] = calibrated_h
+                AC_STATE["temp_calibration_offset"] = t_calib
+                AC_STATE["humidity_calibration_offset"] = h_calib
                 if live.get("luminosity"):
                     AC_STATE["luminosity"] = live["luminosity"]
 
@@ -1036,8 +1053,7 @@ def poll_live_sensors(interval=20):
 
                 AC_STATE["sensor_status"] = f"Auto Pull ({target_ip})"
                 AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
-                calib_msg = f" (Raw: {raw_t}°C, Offset: {calib_offset:+}°C)" if calib_offset != 0 else ""
-                hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C{calib_msg} | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
+                hub_log(f"[SENSOR UPDATE PULL] Temp: {calibrated_t}°C (Raw: {raw_t}°C, {t_calib:+}°C) | Hum: {calibrated_h}% (Raw: {raw_h}%, {h_calib:+}%) | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
 
                 # Record to SQLite database
                 ambi_db.record_sensor(
@@ -1632,11 +1648,17 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             if body:
                 data = json.loads(body)
                 updated = False
+                t_calib = float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0))
+                h_calib = float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0))
                 if "temperature" in data:
-                    AC_STATE["room_temp"] = float(data["temperature"])
+                    raw_t = float(data["temperature"])
+                    AC_STATE["room_temp_raw"] = raw_t
+                    AC_STATE["room_temp"] = round(raw_t + t_calib, 2)
                     updated = True
                 if "humidity" in data:
-                    AC_STATE["room_humidity"] = float(data["humidity"])
+                    raw_h = float(data["humidity"])
+                    AC_STATE["room_humidity_raw"] = raw_h
+                    AC_STATE["room_humidity"] = round(min(100.0, max(0.0, raw_h + h_calib)), 2)
                     updated = True
                 if updated:
                     AC_STATE["sensor_status"] = f"PUSH (HTTP POST :{self.server.server_port})"
@@ -1702,7 +1724,8 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                     "auto_tune_enabled": COMFORT_PROFILE.get("auto_tune_enabled", True),
                     "target_base_humidex": COMFORT_PROFILE.get("target_base_humidex", 26.0),
                     "user_offset": COMFORT_PROFILE.get("user_offset", 0.0),
-                    "temp_calibration_offset": COMFORT_PROFILE.get("temp_calibration_offset", 0.0),
+                    "temp_calibration_offset": float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0)),
+                    "humidity_calibration_offset": float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0)),
                     "min_temp": COMFORT_PROFILE.get("min_temp", 22),
                     "max_temp": COMFORT_PROFILE.get("max_temp", 27),
                     "cooldown_minutes": COMFORT_PROFILE.get("cooldown_minutes", 10),
@@ -1816,36 +1839,55 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             }).encode('utf-8'))
             return
 
-        # 4.05 Sensor Calibration API (Temperature Offset)
-        if path == '/api/settings/calibration':
+        # 4.05 Sensor Calibration API (Temperature & Humidity Offsets: default -3.0°C / +4%)
+        if path in ('/api/settings/calibration', '/api/sensors/calibration'):
             t_off = query.get('temp_offset', [None])[0]
+            h_off = query.get('humidity_offset', [None])[0]
+            updated = False
             if t_off is not None:
                 try:
-                    val = round(float(t_off), 2)
-                    COMFORT_PROFILE["temp_calibration_offset"] = val
-                    save_comfort_profile(COMFORT_PROFILE)
-                    raw_t = AC_STATE.get("room_temp_raw")
-                    if raw_t is None:
-                        raw_t = AC_STATE.get("room_temp")
-                    if raw_t is not None:
-                        AC_STATE["room_temp"] = round(raw_t + val, 2)
-                        AC_STATE["temp_calibration_offset"] = val
-                        c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE.get("room_humidity"))
-                        AC_STATE["humidex"] = c["humidex"]
-                        AC_STATE["comfort_score"] = c["score"]
-                        AC_STATE["comfort_label"] = c["label"]
-                        AC_STATE["comfort_badge_color"] = c["badge_color"]
-                    hub_log(f"[SENSOR CALIBRATION] Updated temp offset to {val:+}°C (Room Temp: {AC_STATE.get('room_temp')}°C)")
-                except Exception as e:
-                    hub_log(f"[-] Invalid calibration param: {e}")
+                    val_t = round(float(t_off), 2)
+                    COMFORT_PROFILE["temp_calibration_offset"] = val_t
+                    AC_STATE["temp_calibration_offset"] = val_t
+                    updated = True
+                except ValueError:
+                    pass
+            if h_off is not None:
+                try:
+                    val_h = round(float(h_off), 2)
+                    COMFORT_PROFILE["humidity_calibration_offset"] = val_h
+                    AC_STATE["humidity_calibration_offset"] = val_h
+                    updated = True
+                except ValueError:
+                    pass
+
+            if updated:
+                save_comfort_profile(COMFORT_PROFILE)
+                raw_t = AC_STATE.get("room_temp_raw")
+                if raw_t is not None:
+                    AC_STATE["room_temp"] = round(raw_t + float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0)), 2)
+                raw_h = AC_STATE.get("room_humidity_raw")
+                if raw_h is not None:
+                    AC_STATE["room_humidity"] = round(min(100.0, max(0.0, raw_h + float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0)))), 2)
+                if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
+                    c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
+                    AC_STATE["humidex"] = c["humidex"]
+                    AC_STATE["comfort_score"] = c["score"]
+                    AC_STATE["comfort_label"] = c["label"]
+                    AC_STATE["comfort_badge_color"] = c["badge_color"]
+                hub_log(f"[SENSOR CALIBRATION] Updated offsets -> Temp: {COMFORT_PROFILE.get('temp_calibration_offset'):+}°C | Hum: {COMFORT_PROFILE.get('humidity_calibration_offset'):+}% (Room: {AC_STATE.get('room_temp')}°C, {AC_STATE.get('room_humidity')}%)")
+
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({
                 "status": "OK",
-                "temp_calibration_offset": COMFORT_PROFILE.get("temp_calibration_offset", 0.0),
+                "temp_calibration_offset": float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0)),
+                "humidity_calibration_offset": float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0)),
                 "room_temp": AC_STATE.get("room_temp"),
-                "room_temp_raw": AC_STATE.get("room_temp_raw")
+                "room_temp_raw": AC_STATE.get("room_temp_raw"),
+                "room_humidity": AC_STATE.get("room_humidity"),
+                "room_humidity_raw": AC_STATE.get("room_humidity_raw")
             }).encode('utf-8'))
             return
 
@@ -2400,7 +2442,10 @@ def run_cloud_mock(port):
                                     from test_daikin import parse_sensor_value
                                     val, _ = parse_sensor_value(payload)
                                     if val is not None:
-                                        AC_STATE["room_temp"] = val
+                                        t_calib = float(COMFORT_PROFILE.get("temp_calibration_offset", -3.0))
+                                        AC_STATE["room_temp_raw"] = val
+                                        AC_STATE["room_temp"] = round(val + t_calib, 2)
+                                        AC_STATE["temp_calibration_offset"] = t_calib
                                         AC_STATE["sensor_status"] = f"Cloud Push (:{p})"
                                         AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
                                         if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
@@ -2418,14 +2463,17 @@ def run_cloud_mock(port):
                                                 comfort_label=c.get("label"),
                                                 source=f"cloud_{p}"
                                             )
-                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 🌡️ Temperature: {val}°C (Port {p})")
+                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 🌡️ Temperature: {AC_STATE['room_temp']}°C (Raw: {val}°C, {t_calib:+}°C) (Port {p})")
                             elif cmd == "NHM":
                                 payload = data[6:].decode('latin1', errors='ignore').strip('\r\n') if len(data) > 6 else ""
                                 if payload:
                                     from test_daikin import parse_sensor_value
                                     val, _ = parse_sensor_value(payload)
                                     if val is not None:
-                                        AC_STATE["room_humidity"] = val
+                                        h_calib = float(COMFORT_PROFILE.get("humidity_calibration_offset", 4.0))
+                                        AC_STATE["room_humidity_raw"] = val
+                                        AC_STATE["room_humidity"] = round(min(100.0, max(0.0, val + h_calib)), 2)
+                                        AC_STATE["humidity_calibration_offset"] = h_calib
                                         AC_STATE["sensor_status"] = f"Cloud Push (:{p})"
                                         AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
                                         if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
@@ -2443,7 +2491,7 @@ def run_cloud_mock(port):
                                                 comfort_label=c.get("label"),
                                                 source=f"cloud_{p}"
                                             )
-                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 💧 Humidity: {val}% (Port {p})")
+                                        hub_log(f"  [📡 AMBI SENSOR PUSH] 💧 Humidity: {AC_STATE['room_humidity']}% (Raw: {val}%, {h_calib:+}%) (Port {p})")
                         else:
                             # Generic HTTP or raw response if needed
                             if b"HTTP" in data or b"GET" in data or b"POST" in data:

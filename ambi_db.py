@@ -129,7 +129,8 @@ def init_db(db_path=None):
                         auto_tune_enabled INTEGER DEFAULT 1,
                         target_base_humidex REAL DEFAULT 26.0,
                         user_offset REAL DEFAULT 0.0,
-                        temp_calibration_offset REAL DEFAULT 0.0,
+                        temp_calibration_offset REAL DEFAULT -3.0,
+                        humidity_calibration_offset REAL DEFAULT 4.0,
                         min_temp INTEGER DEFAULT 22,
                         max_temp INTEGER DEFAULT 27,
                         cooldown_minutes INTEGER DEFAULT 10,
@@ -140,9 +141,21 @@ def init_db(db_path=None):
                 """)
 
                 try:
-                    conn.execute("ALTER TABLE comfort_profile ADD COLUMN temp_calibration_offset REAL DEFAULT 0.0;")
+                    conn.execute("ALTER TABLE comfort_profile ADD COLUMN temp_calibration_offset REAL DEFAULT -3.0;")
                 except Exception:
                     pass
+                try:
+                    conn.execute("ALTER TABLE comfort_profile ADD COLUMN humidity_calibration_offset REAL DEFAULT 4.0;")
+                except Exception:
+                    pass
+
+                # Update existing profile record if offsets are at old default 0.0 or NULL
+                conn.execute("""
+                    UPDATE comfort_profile 
+                    SET temp_calibration_offset = -3.0, 
+                        humidity_calibration_offset = 4.0 
+                    WHERE id = 1 AND (temp_calibration_offset = 0.0 OR temp_calibration_offset IS NULL);
+                """)
 
                 # Auto-migrate any past misclassified AI actions
                 conn.execute("""
@@ -237,13 +250,14 @@ def seed_initial_data_if_empty(db_path=None):
                 now = time.time()
                 cur.execute("""
                     INSERT INTO comfort_profile
-                    (id, auto_tune_enabled, target_base_humidex, user_offset, temp_calibration_offset, min_temp, max_temp, cooldown_minutes, last_tune_time, last_tune_action, updated_at)
-                    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, auto_tune_enabled, target_base_humidex, user_offset, temp_calibration_offset, humidity_calibration_offset, min_temp, max_temp, cooldown_minutes, last_tune_time, last_tune_action, updated_at)
+                    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     1 if prof_data.get("auto_tune_enabled", True) else 0,
                     float(prof_data.get("target_base_humidex", 26.0)),
                     float(prof_data.get("user_offset", 1.7 if prof_data else 0.0)),
-                    float(prof_data.get("temp_calibration_offset", 0.0)),
+                    float(prof_data.get("temp_calibration_offset", -3.0)),
+                    float(prof_data.get("humidity_calibration_offset", 4.0)),
                     int(prof_data.get("min_temp", 22)),
                     int(prof_data.get("max_temp", 27)),
                     int(prof_data.get("cooldown_minutes", 10)),
@@ -265,16 +279,22 @@ def load_comfort_profile(db_path=None):
             cur.execute("""
                 SELECT auto_tune_enabled, target_base_humidex, user_offset,
                        min_temp, max_temp, cooldown_minutes, last_tune_time, last_tune_action,
-                       temp_calibration_offset
+                       temp_calibration_offset, humidity_calibration_offset
                 FROM comfort_profile
                 WHERE id = 1
             """)
             r = cur.fetchone()
             if r:
-                t_cal = 0.0
+                t_cal = -3.0
+                h_cal = 4.0
                 try:
                     if "temp_calibration_offset" in r.keys() and r["temp_calibration_offset"] is not None:
                         t_cal = float(r["temp_calibration_offset"])
+                except Exception:
+                    pass
+                try:
+                    if "humidity_calibration_offset" in r.keys() and r["humidity_calibration_offset"] is not None:
+                        h_cal = float(r["humidity_calibration_offset"])
                 except Exception:
                     pass
                 return {
@@ -282,6 +302,7 @@ def load_comfort_profile(db_path=None):
                     "target_base_humidex": float(r["target_base_humidex"]),
                     "user_offset": float(r["user_offset"]),
                     "temp_calibration_offset": t_cal,
+                    "humidity_calibration_offset": h_cal,
                     "min_temp": int(r["min_temp"]),
                     "max_temp": int(r["max_temp"]),
                     "cooldown_minutes": int(r["cooldown_minutes"]),
@@ -295,7 +316,8 @@ def load_comfort_profile(db_path=None):
         "auto_tune_enabled": True,
         "target_base_humidex": 26.0,
         "user_offset": 0.0,
-        "temp_calibration_offset": 0.0,
+        "temp_calibration_offset": -3.0,
+        "humidity_calibration_offset": 4.0,
         "min_temp": 22,
         "max_temp": 27,
         "cooldown_minutes": 10,
@@ -313,13 +335,14 @@ def save_comfort_profile(profile, db_path=None):
             with conn:
                 conn.execute("""
                     INSERT INTO comfort_profile 
-                    (id, auto_tune_enabled, target_base_humidex, user_offset, temp_calibration_offset, min_temp, max_temp, cooldown_minutes, last_tune_time, last_tune_action, updated_at)
-                    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, auto_tune_enabled, target_base_humidex, user_offset, temp_calibration_offset, humidity_calibration_offset, min_temp, max_temp, cooldown_minutes, last_tune_time, last_tune_action, updated_at)
+                    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         auto_tune_enabled = excluded.auto_tune_enabled,
                         target_base_humidex = excluded.target_base_humidex,
                         user_offset = excluded.user_offset,
                         temp_calibration_offset = excluded.temp_calibration_offset,
+                        humidity_calibration_offset = excluded.humidity_calibration_offset,
                         min_temp = excluded.min_temp,
                         max_temp = excluded.max_temp,
                         cooldown_minutes = excluded.cooldown_minutes,
@@ -330,7 +353,8 @@ def save_comfort_profile(profile, db_path=None):
                     1 if profile.get("auto_tune_enabled", True) else 0,
                     float(profile.get("target_base_humidex", 26.0)),
                     float(profile.get("user_offset", 0.0)),
-                    float(profile.get("temp_calibration_offset", 0.0)),
+                    float(profile.get("temp_calibration_offset", -3.0)),
+                    float(profile.get("humidity_calibration_offset", 4.0)),
                     int(profile.get("min_temp", 22)),
                     int(profile.get("max_temp", 27)),
                     int(profile.get("cooldown_minutes", 10)),

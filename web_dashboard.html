@@ -1388,6 +1388,7 @@
                     <div>Local Hub Server: <span id="devHubIpText" style="color: var(--text-primary); font-family: monospace;">192.168.1.199:9090</span></div>
                     <div>IR Engine Target: <span style="color: var(--text-primary); font-family: monospace;">TCP 4998 (Daikin ARC480A46)</span></div>
                     <div>Cloud Mock Port: <span style="color: var(--text-primary); font-family: monospace;">TCP 8867 (TLS 1.2)</span></div>
+                    <div>Sensor Calibration: <span id="devCalibSummaryText" style="color: var(--status-green); font-family: monospace;">-3.0°C / +4.0% (Active)</span></div>
                 </div>
             </div>
         </div>
@@ -1459,24 +1460,45 @@
                     </div>
                 </div>
 
-                <!-- 2.5 Sensor Calibration Offset (ชดเชยอุณหภูมิเซนเซอร์) -->
+                <!-- 2.5 Sensor Calibration Offset (-3.0°C / +4%) -->
                 <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="control-label">ชดเชยอุณหภูมิเซนเซอร์ (Calibration)</span>
-                        <span id="tempCalibValText" style="font-size: 11px; font-weight: 600; color: #00c4b4; font-variant-numeric: tabular-nums;">0.0°C</span>
+                        <span class="control-label">Sensor Calibration (-3.0°C / +4%)</span>
+                        <div style="display: flex; gap: 6px;">
+                            <span id="tempCalibValText" style="font-size: 11px; font-weight: 600; color: #00c4b4; font-variant-numeric: tabular-nums;">-3.0°C</span>
+                            <span id="humCalibValText" style="font-size: 11px; font-weight: 600; color: #38bdf8; font-variant-numeric: tabular-nums;">+4.0%</span>
+                        </div>
                     </div>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px;">
-                        ปรับชดเชยความร้อนสะสมของตัวเครื่อง Ambi เพื่อให้อุณหภูมิตรงกับจุดที่นั่งทำงานจริง
+                        ปรับชดเชยความร้อนสะสมของตัวเครื่อง Ambi และความชื้น เพื่อให้อุณหภูมิและความชื้นตรงกับสภาพห้องจริง
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
-                        <button class="btn-opt btn-calib-opt" data-calib="-2.0" onclick="setTempCalibration(-2.0)">-2.0°C</button>
-                        <button class="btn-opt btn-calib-opt" data-calib="-1.5" onclick="setTempCalibration(-1.5)">-1.5°C</button>
-                        <button class="btn-opt btn-calib-opt" data-calib="-1.0" onclick="setTempCalibration(-1.0)">-1.0°C</button>
-                        <button class="btn-opt btn-calib-opt" data-calib="-0.5" onclick="setTempCalibration(-0.5)">-0.5°C</button>
-                        <button class="btn-opt btn-calib-opt active" data-calib="0.0" onclick="setTempCalibration(0.0)">0.0°C</button>
+
+                    <!-- Temp Offset Buttons -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px;">Temperature Offset:</div>
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                            <button class="btn-opt btn-calib-opt active" data-calib="-3.0" onclick="setTempCalibration(-3.0)">-3.0°C</button>
+                            <button class="btn-opt btn-calib-opt" data-calib="-2.0" onclick="setTempCalibration(-2.0)">-2.0°C</button>
+                            <button class="btn-opt btn-calib-opt" data-calib="-1.0" onclick="setTempCalibration(-1.0)">-1.0°C</button>
+                            <button class="btn-opt btn-calib-opt" data-calib="-0.5" onclick="setTempCalibration(-0.5)">-0.5°C</button>
+                            <button class="btn-opt btn-calib-opt" data-calib="0.0" onclick="setTempCalibration(0.0)">0.0°C</button>
+                        </div>
                     </div>
+
+                    <!-- Humidity Offset Buttons -->
+                    <div style="margin-bottom: 6px;">
+                        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px;">Humidity Offset:</div>
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                            <button class="btn-opt btn-hum-calib-opt active" data-calib="4.0" onclick="setHumCalibration(4.0)">+4%</button>
+                            <button class="btn-opt btn-hum-calib-opt" data-calib="2.0" onclick="setHumCalibration(2.0)">+2%</button>
+                            <button class="btn-opt btn-hum-calib-opt" data-calib="0.0" onclick="setHumCalibration(0.0)">0%</button>
+                            <button class="btn-opt btn-hum-calib-opt" data-calib="-2.0" onclick="setHumCalibration(-2.0)">-2%</button>
+                            <button class="btn-opt btn-hum-calib-opt" data-calib="-4.0" onclick="setHumCalibration(-4.0)">-4%</button>
+                        </div>
+                    </div>
+
                     <div id="tempCalibCompareText" style="font-size: 10px; color: var(--text-secondary); text-align: center; margin-top: 6px; font-variant-numeric: tabular-nums;">
-                        อ่านจากเครื่อง: <span id="calibRawTempText">--</span>°C &bull; แสดงผลจริง: <span id="calibActiveTempText" style="font-weight: 500; color: var(--text-primary);">--</span>
+                        อ่านจากเครื่อง: <span id="calibRawTempText">--</span>°C / <span id="calibRawHumText">--</span>% &bull; แสดงผลจริง: <span id="calibActiveTempText" style="font-weight: 500; color: var(--text-primary);">--</span> / <span id="calibActiveHumText" style="font-weight: 500; color: var(--text-primary);">--</span>
                     </div>
                 </div>
 
@@ -1800,17 +1822,36 @@
                 }
 
                 // 7.5 Calibration in Device Settings
-                const calOffset = (data.profile && data.profile.temp_calibration_offset !== undefined) ? data.profile.temp_calibration_offset : 0.0;
+                const calOffset = (data.profile && data.profile.temp_calibration_offset !== undefined) ? data.profile.temp_calibration_offset : -3.0;
                 const calText = document.getElementById('tempCalibValText');
                 if (calText) calText.innerText = (calOffset > 0 ? '+' : '') + Number(calOffset).toFixed(1) + '°C';
+
+                const humCalOffset = (data.profile && data.profile.humidity_calibration_offset !== undefined) ? data.profile.humidity_calibration_offset : 4.0;
+                const humCalText = document.getElementById('humCalibValText');
+                if (humCalText) humCalText.innerText = (humCalOffset > 0 ? '+' : '') + Number(humCalOffset).toFixed(1) + '%';
+
+                const devCalib = document.getElementById('devCalibSummaryText');
+                if (devCalib) devCalib.innerText = `${(calOffset > 0 ? '+' : '') + Number(calOffset).toFixed(1)}°C / ${(humCalOffset > 0 ? '+' : '') + Number(humCalOffset).toFixed(1)}% (Active)`;
+
                 const elRaw = document.getElementById('calibRawTempText');
                 if (elRaw) elRaw.innerText = (data.ac_state.room_temp_raw !== undefined && data.ac_state.room_temp_raw !== null) ? data.ac_state.room_temp_raw : (rt || '--');
                 const elAct = document.getElementById('calibActiveTempText');
                 if (elAct) elAct.innerText = (rt !== null && rt !== undefined) ? (rt + '°C') : '--';
 
+                const elRawHum = document.getElementById('calibRawHumText');
+                if (elRawHum) elRawHum.innerText = (data.ac_state.room_humidity_raw !== undefined && data.ac_state.room_humidity_raw !== null) ? data.ac_state.room_humidity_raw : (rh || '--');
+                const elActHum = document.getElementById('calibActiveHumText');
+                if (elActHum) elActHum.innerText = (rh !== null && rh !== undefined) ? (rh + '%') : '--';
+
                 document.querySelectorAll('.btn-calib-opt').forEach(btn => {
                     const v = parseFloat(btn.getAttribute('data-calib'));
                     if (Math.abs(v - calOffset) < 0.05) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+
+                document.querySelectorAll('.btn-hum-calib-opt').forEach(btn => {
+                    const v = parseFloat(btn.getAttribute('data-calib'));
+                    if (Math.abs(v - humCalOffset) < 0.05) btn.classList.add('active');
                     else btn.classList.remove('active');
                 });
 
@@ -2012,6 +2053,22 @@
                 const data = await res.json();
                 if (data.status === 'OK') {
                     showToast(`ชดเชยเรียบร้อย (${val > 0 ? '+' : ''}${val}°C) -> อุณหภูมิใหม่ ${data.room_temp}°C`);
+                    updateDashboard();
+                } else {
+                    showToast('ตั้งค่าไม่สำเร็จ');
+                }
+            } catch (e) {
+                showToast('การเชื่อมต่อล้มเหลว');
+            }
+        }
+
+        async function setHumCalibration(val) {
+            showToast(`กำลังตั้งค่าชดเชยความชื้น: ${val > 0 ? '+' : ''}${val}%...`);
+            try {
+                const res = await fetch(`/api/settings/calibration?humidity_offset=${val}`);
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    showToast(`ชดเชยความชื้นเรียบร้อย (${val > 0 ? '+' : ''}${val}%) -> ความชื้นใหม่ ${data.room_humidity}%`);
                     updateDashboard();
                 } else {
                     showToast('ตั้งค่าไม่สำเร็จ');
