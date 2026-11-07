@@ -847,6 +847,29 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * **`web_dashboard.html`:**
      * เพิ่มการซิงค์ค่าสไลเดอร์และเปอร์เซ็นต์ความสว่างตาม `AC_STATE["led_brightness"]` แบบเรียลไทม์
 
+---
+
+## 43. ดำเนินการ Unslopping หน้าเว็บแดชบอร์ดตามแนวทางของ Damir Sokolovsky (@heydamir/unslop)
+
+1. **ทิศทางการออกแบบใหม่ (5-Line Direction):**
+   * **Product:** แดชบอร์ดและระบบควบคุมสภาพอากาศอัตโนมัติประจำบ้าน สำหรับฮาร์ดแวร์ Ambi Climate 2 และแอร์ Daikin Inverter ให้อยู่ในสภาวะสบายสูงสุดโดยไม่ต้องพึ่งพาระบบคลาวด์
+   * **Character:** `calm, exact, climate-instrument` (สุขุม, แม่นยำ, เสมือนเครื่องมือวัดสภาพอากาศระดับห้องปฏิบัติการ)
+   * **World:** Precision climate instrumentation, tactile HVAC remote controllers, calm dark studio nightlight
+   * **Moments:** วงแหวนควบคุมสภาพอากาศ Comfort Dial กลางหน้าจอที่ให้ความรู้สึกเสมือนฮาร์ดแวร์จริง และกราฟเส้นคู่ประวัติสภาพอากาศ (อุณหภูมิ Coral และความชื้นสัมพัทธ์ Cyan)
+   * **Signature:** ไฟบอกสถานะการเชื่อมต่อฮาร์ดแวร์จริง (Live hardware pulse dot) แสดงสถานะการต่อแบบเรียลไทม์กับ Ambi Climate 2 (`Port 8070`) พร้อมปุ่มปรับอุณหภูมิแบบ Tactile Steppers
+
+2. **ผลการดำเนินการ 9 Passes ครบถ้วน:**
+   * **Pass 1 (Spacing):** ปรับระยะ Margins, Paddings, Gaps และความสูงทั้งหมดให้อยู่บนสเกล 4px grid อย่างเคร่งครัด
+   * **Pass 2 (Color):** ปรับใช้ Graphite Neutral Ramp (`#0f0f10`, `#141415`, `#19191b`, `#232325`), ตัดเอฟเฟกต์แสงฟุ้ง (glows), radial washes, neon borders และ colored drop-shadows ออกทั้งหมด ใช้ระดับพื้นผิวและเส้นขอบ hairline 8% เพื่อสร้างมิติ
+   * **Pass 3 (Icons):** นำอีโมจิทั้งหมดออกจากปุ่มและหัวข้อ (0 Emojis) แทนที่ด้วยไอคอนเส้นคมชัด (SVG Line Icons, stroke 1.8) และปุ่มระดับความสบายตัวเลข Tabular Nums (`-2`, `-1`, `0`, `+1`, `+2`)
+   * **Pass 4 (Copy):** ปรับสำนวนข้อความให้กระชับ แม่นยำ สุภาพ ไร้การตะโกนหรือเครื่องหมายอัศเจรีย์ (!)
+   * **Pass 5 (Type):** ใช้ Sentence case ทั้งหมด (ยกเลิก ALL-CAPS tracked labels), น้ำหนักฟอนต์ 400-500 และบังคับใช้ `font-variant-numeric: tabular-nums` สำหรับตัวเลขค่าเซนเซอร์ทุกจุด
+   * **Pass 6 (Layout):** รักษาสัดส่วนเฟรมมือถือ 440px ที่สมดุล พร้อมโครงสร้าง 4 Iconic Drawers
+   * **Pass 7 (Details):** คำนวณรัศมีมุมโค้ง (Nested border radius) อย่างถูกต้อง
+   * **Pass 8 (Visuals):** ปรับดีไซน์ Hero Dial ให้เสมือนหน้าปัดเครื่องมือวัดทางกายภาพ และกราฟ SVG แบบ Catmull-Rom spline
+   * **Pass 9 (Motion):** ตัด hover scale และ `transition-all` หันมาใช้ micro-transitions ที่ระบุ property ชัดเจน พร้อม touch active feedback
+
+
 
 
 

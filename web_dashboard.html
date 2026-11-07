@@ -3,36 +3,44 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ambi Climate - Living Room</title>
+    <title>Ambi Climate — Living Room</title>
     <style>
         :root {
-            --ambi-teal: #00c4b4;
-            --ambi-teal-glow: rgba(0, 196, 180, 0.4);
-            --ambi-blue: #0284c7;
-            --ambi-dark: #070d19;
-            --ambi-surface: rgba(18, 28, 48, 0.88);
-            --ambi-surface-border: rgba(255, 255, 255, 0.08);
-            --text-main: #ffffff;
-            --text-sub: #94a3b8;
-            --text-dim: #64748b;
-            --green: #10b981;
-            --blue: #3b82f6;
-            --amber: #f59e0b;
-            --red: #ef4444;
+            /* Graphite Neutral Ramp */
+            --surface-deep: #0f0f10;
+            --surface-bg: #141415;
+            --surface-card: #19191b;
+            --surface-raised: #232325;
+            --surface-overlay: rgba(15, 15, 16, 0.75);
+            --border-hairline: rgba(255, 255, 255, 0.08);
+            --border-subtle: rgba(255, 255, 255, 0.12);
+
+            /* Typography */
+            --text-primary: #ededed;
+            --text-secondary: #a1a1a6;
+            --text-muted: #85858b;
+
+            /* Accent & Semantics */
+            --accent: #00b8a9;
+            --accent-dim: rgba(0, 184, 169, 0.15);
+            --temp-coral: #f87171;
+            --hum-cyan: #38bdf8;
+            --status-green: #4cc38a;
+            --status-danger: #e5484d;
+            --status-danger-dim: rgba(229, 72, 77, 0.14);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: #030712;
-            background: radial-gradient(circle at 50% 12%, #182848 0%, #0d1527 50%, #040814 100%);
-            color: var(--text-main);
+            background-color: var(--surface-deep);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -40,7 +48,7 @@
             overflow-x: hidden;
         }
 
-        /* Mobile Frame matching Ambi Climate App (User Manual Page 10) */
+        /* Mobile App Frame */
         .app-frame {
             width: 100%;
             max-width: 440px;
@@ -48,21 +56,20 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            background: rgba(10, 17, 33, 0.75);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.85);
+            background-color: var(--surface-bg);
+            border-left: 1px solid var(--border-hairline);
+            border-right: 1px solid var(--border-hairline);
             overflow: hidden;
         }
 
-        /* Top Navigation Bar (Page 10) */
+        /* Top Navigation Bar */
         .top-nav {
-            padding: 16px 20px 10px;
+            padding: 16px 20px 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            border-bottom: 1px solid var(--ambi-surface-border);
-            background: rgba(10, 16, 29, 0.65);
-            backdrop-filter: blur(12px);
+            gap: 12px;
+            border-bottom: 1px solid var(--border-hairline);
+            background-color: var(--surface-card);
             z-index: 10;
         }
 
@@ -78,66 +85,77 @@
             gap: 12px;
         }
 
-        .btn-back {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-            opacity: 0.85;
-            transition: opacity 0.2s;
-        }
-        .btn-back:hover { opacity: 1; }
-
-        .room-title-box {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .room-title {
-            font-size: 19px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .room-location {
-            font-size: 11px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-refresh {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--ambi-surface-border);
-            color: var(--ambi-teal);
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
+        .btn-icon {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: color 0.15s ease, background-color 0.15s ease;
         }
-        .btn-refresh:active { transform: rotate(180deg); }
+        .btn-icon:hover {
+            color: var(--text-primary);
+            background-color: var(--surface-raised);
+        }
+        .btn-icon:active {
+            transform: scale(0.96);
+        }
 
-        /* Actual Room Conditions Bar (Page 10) */
+        .room-title-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .room-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .room-title {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+            color: var(--text-primary);
+        }
+
+        /* Signature Live Pulse Dot */
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: var(--status-green);
+            display: inline-block;
+            box-shadow: 0 0 0 2px rgba(76, 195, 138, 0.2);
+            animation: pulseQuiet 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseQuiet {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.92); }
+        }
+
+        .room-location {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 0.2px;
+        }
+
+        /* Conditions Bar */
         .conditions-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 20px;
-            padding: 6px 14px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 10px;
+            padding: 8px 14px;
         }
 
         .condition-item {
@@ -145,22 +163,30 @@
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        .condition-item svg {
+            color: var(--text-secondary);
         }
 
         .comfort-pill {
-            padding: 3px 10px;
-            border-radius: 12px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 11px;
-            font-weight: 700;
-            background: rgba(0, 196, 180, 0.2);
-            color: var(--ambi-teal);
-            border: 1px solid rgba(0, 196, 180, 0.4);
-            transition: all 0.3s ease;
+            font-weight: 500;
+            background-color: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(0, 184, 169, 0.3);
             cursor: pointer;
+            transition: opacity 0.15s ease;
+        }
+        .comfort-pill:hover {
+            opacity: 0.9;
         }
 
-        /* 4-Hour Climate Curve Chart (Page 10) */
+        /* 4-Hour Climate Curve Chart */
         .chart-section {
             padding: 16px 20px 0;
             position: relative;
@@ -170,13 +196,14 @@
             display: flex;
             justify-content: space-between;
             font-size: 11px;
-            color: var(--text-dim);
-            margin-bottom: 6px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
         }
 
         .chart-container {
             width: 100%;
-            height: 90px;
+            height: 84px;
             position: relative;
         }
 
@@ -190,88 +217,88 @@
             display: flex;
             justify-content: space-between;
             font-size: 10px;
-            color: var(--text-dim);
-            margin-top: 4px;
+            color: var(--text-muted);
+            margin-top: 6px;
             padding: 0 4px;
+            font-variant-numeric: tabular-nums;
         }
 
-        /* Center Hero Dial / Bubble (Page 10) */
+        /* Center Hero Dial */
         .dial-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px 20px;
             position: relative;
         }
 
         .dial-bubble {
-            width: 226px;
-            height: 226px;
+            width: 216px;
+            height: 216px;
             border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, rgba(0, 196, 180, 0.25) 0%, rgba(14, 165, 233, 0.12) 60%, rgba(10, 17, 33, 0.45) 100%);
-            border: 2.5px solid rgba(0, 196, 180, 0.55);
-            box-shadow: 0 0 35px var(--ambi-teal-glow), inset 0 0 25px rgba(0, 196, 180, 0.15);
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            box-shadow: inset 0 0 0 6px var(--surface-bg), inset 0 0 0 7px var(--border-hairline);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.4s ease;
             position: relative;
             user-select: none;
+            transition: transform 0.15s ease, border-color 0.2s ease;
         }
         .dial-bubble:active {
-            transform: scale(0.97);
+            transform: scale(0.98);
         }
 
         .dial-mode-badge {
             font-size: 11px;
-            font-weight: 700;
-            color: var(--ambi-teal);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: 0.4px;
             margin-bottom: 4px;
         }
 
         .dial-label {
             font-size: 26px;
-            font-weight: 800;
-            color: #ffffff;
+            font-weight: 500;
+            color: var(--text-primary);
             text-align: center;
-            letter-spacing: -0.5px;
-            line-height: 1.1;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            letter-spacing: -0.3px;
+            line-height: 1.15;
         }
 
         .dial-sub {
             font-size: 12px;
-            color: var(--text-sub);
+            color: var(--text-secondary);
             margin-top: 8px;
-            font-weight: 500;
+            font-weight: 400;
+            font-variant-numeric: tabular-nums;
         }
 
         .dial-hint {
-            font-size: 10px;
-            color: var(--text-dim);
+            font-size: 11px;
+            color: var(--text-muted);
             margin-top: 6px;
             text-align: center;
         }
 
-        /* Interactive Feedback Row (Page 10) */
+        /* Feedback Section */
         .feedback-section {
             width: 100%;
-            padding: 0 20px 16px;
+            padding: 0 20px 20px;
         }
 
         .feedback-title {
             font-size: 11px;
-            color: var(--text-dim);
+            font-weight: 500;
+            color: var(--text-muted);
             text-align: center;
             margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.2px;
         }
 
         .feedback-grid {
@@ -281,74 +308,90 @@
         }
 
         .btn-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 12px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 8px;
             padding: 10px 4px;
-            color: #fff;
+            color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 4px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .btn-chip:hover {
+            border-color: var(--border-subtle);
         }
         .btn-chip:active {
-            transform: scale(0.94);
-            background: rgba(0, 196, 180, 0.25);
-            border-color: var(--ambi-teal);
+            transform: scale(0.96);
         }
-        .btn-chip span.emoji { font-size: 16px; }
+        .chip-step {
+            font-size: 12px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
+        }
+        .btn-chip.chip-center {
+            background-color: var(--accent-dim);
+            border-color: rgba(0, 184, 169, 0.3);
+        }
+        .btn-chip.chip-center .chip-step {
+            color: var(--accent);
+        }
 
-        /* Bottom Tab Bar (Page 10: 4 Iconic Tabs) */
+        /* Bottom Tab Bar */
         .bottom-nav {
             margin-top: auto;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            background: rgba(10, 16, 29, 0.88);
-            backdrop-filter: blur(15px);
-            border-top: 1px solid var(--ambi-surface-border);
-            padding: 8px 6px 14px;
+            background-color: var(--surface-card);
+            border-top: 1px solid var(--border-hairline);
+            padding: 8px 8px 14px;
             z-index: 10;
         }
 
         .nav-tab {
             background: none;
             border: none;
-            color: var(--text-dim);
+            color: var(--text-muted);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
-            font-size: 10px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 400;
             cursor: pointer;
             padding: 6px 0;
-            transition: color 0.2s;
+            border-radius: 6px;
+            transition: color 0.15s ease;
+        }
+        .nav-tab svg {
+            color: var(--text-muted);
+            transition: color 0.15s ease;
         }
         .nav-tab:hover, .nav-tab.active {
-            color: var(--ambi-teal);
+            color: var(--text-primary);
         }
-        .nav-tab-icon {
-            font-size: 20px;
+        .nav-tab:hover svg, .nav-tab.active svg {
+            color: var(--accent);
         }
 
-        /* Slide-up Modals / Drawers (Page 14 & 13) */
+        /* Slide-up Drawers */
         .drawer-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(8px);
+            background-color: var(--surface-overlay);
             z-index: 50;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.25s ease;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
@@ -359,14 +402,14 @@
         }
 
         .drawer-content {
-            background: #111a2e;
-            border-top: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 24px 24px 0 0;
+            background-color: var(--surface-card);
+            border-top: 1px solid var(--border-subtle);
+            border-radius: 20px 20px 0 0;
             padding: 20px;
-            max-height: 80vh;
+            max-height: 82vh;
             overflow-y: auto;
             transform: translateY(100%);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -379,26 +422,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--ambi-surface-border);
+            border-bottom: 1px solid var(--border-hairline);
             padding-bottom: 12px;
         }
-        .drawer-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .btn-close {
-            background: rgba(255, 255, 255, 0.08);
-            border: none;
-            color: #fff;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
+        .drawer-title-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
+            gap: 8px;
+        }
+        .drawer-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
         }
 
         .control-group {
@@ -408,10 +443,9 @@
         }
         .control-label {
             font-size: 12px;
-            font-weight: 600;
-            color: var(--text-sub);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: 0.2px;
         }
 
         .btn-toggle-group {
@@ -421,100 +455,164 @@
         }
 
         .btn-opt {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--ambi-surface-border);
-            color: var(--text-sub);
-            padding: 8px 14px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 400;
             cursor: pointer;
             flex: 1 1 auto;
             text-align: center;
-            transition: all 0.2s;
+            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .btn-opt:hover {
+            color: var(--text-primary);
+            border-color: var(--border-subtle);
         }
         .btn-opt.active {
-            background: var(--ambi-teal);
-            color: #030712;
-            border-color: var(--ambi-teal);
-            font-weight: 700;
+            background-color: #ededed;
+            color: #0f0f10;
+            border-color: #ededed;
+            font-weight: 500;
         }
 
+        /* Stepper */
         .stepper-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 14px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 10px;
             padding: 8px 16px;
+            height: 52px;
         }
         .btn-step {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-hairline);
+            color: var(--text-primary);
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            font-size: 20px;
-            font-weight: 700;
+            font-size: 18px;
+            font-weight: 400;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background-color 0.15s ease;
+        }
+        .btn-step:hover {
+            background-color: #2b2b2e;
+        }
+        .btn-step:active {
+            transform: scale(0.94);
         }
         .stepper-val {
             font-size: 26px;
-            font-weight: 800;
-            color: var(--ambi-teal);
+            font-weight: 500;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
         }
 
         /* Action Buttons */
         .btn-action {
-            background: var(--ambi-teal);
-            color: #030712;
+            background-color: #ededed;
+            color: #0f0f10;
             border: none;
-            padding: 12px 18px;
-            border-radius: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 500;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
             width: 100%;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s ease;
         }
-        .btn-action:active { opacity: 0.85; }
-        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .btn-action:active { opacity: 0.88; }
+        .btn-secondary {
+            background-color: var(--surface-raised);
+            color: var(--text-primary);
+            border: 1px solid var(--border-hairline);
+        }
+        .btn-secondary:hover {
+            border-color: var(--border-subtle);
+        }
+        .btn-danger {
+            background-color: var(--status-danger-dim);
+            color: #f87171;
+            border: 1px solid rgba(229, 72, 77, 0.3);
+        }
+        .btn-danger:hover {
+            border-color: rgba(229, 72, 77, 0.5);
+        }
 
-        /* History list inside drawer */
-        .history-list {
+        /* Remote Sync Card */
+        .sync-card {
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 10px;
+            padding: 12px 14px;
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 250px;
-            overflow-y: auto;
+            margin-top: 8px;
         }
-        .history-item {
+        .sync-header {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .sync-badge {
             font-size: 11px;
-            border: 1px solid var(--ambi-surface-border);
+            padding: 2px 8px;
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--border-hairline);
+            font-variant-numeric: tabular-nums;
+        }
+        .btn-sync {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: opacity 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-sync-on {
+            background-color: rgba(76, 195, 138, 0.15);
+            color: #4cc38a;
+            border-color: rgba(76, 195, 138, 0.3);
+        }
+        .btn-sync-off {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border-color: var(--border-hairline);
         }
 
-        /* Sub-nav Navigation (Analytics Drawer) */
+        /* Analytics Sub-nav Tabs */
         .sub-nav-tabs {
             display: flex;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 14px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 8px;
             gap: 4px;
         }
         .sub-nav-btn {
@@ -522,25 +620,25 @@
             padding: 8px 10px;
             background: transparent;
             border: none;
-            color: var(--text-sub);
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 400;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: color 0.15s ease, background-color 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
         }
         .sub-nav-btn.active {
-            background: rgba(0, 196, 180, 0.2);
-            color: var(--ambi-teal);
-            border: 1px solid rgba(0, 196, 180, 0.4);
-            box-shadow: 0 2px 8px rgba(0, 196, 180, 0.15);
+            background-color: var(--surface-card);
+            color: var(--text-primary);
+            font-weight: 500;
+            border: 1px solid var(--border-hairline);
         }
 
-        /* Time Range Selector */
+        /* Range Selector */
         .range-bar {
             display: flex;
             justify-content: flex-end;
@@ -548,23 +646,23 @@
         }
         .range-chip {
             padding: 4px 10px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--ambi-surface-border);
-            color: var(--text-dim);
+            border-radius: 6px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            color: var(--text-muted);
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: color 0.15s ease, border-color 0.15s ease;
         }
         .range-chip.active {
-            background: var(--ambi-teal);
-            color: #040814;
-            border-color: var(--ambi-teal);
-            font-weight: 700;
+            background-color: #ededed;
+            color: #0f0f10;
+            border-color: #ededed;
+            font-weight: 500;
         }
 
-        /* Stat Cards Grid */
+        /* Stat Cards */
         .analytics-stat-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -572,38 +670,39 @@
             margin-bottom: 12px;
         }
         .analytics-stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 10px;
-            padding: 8px 10px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 8px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 3px;
         }
         .analytics-stat-title {
-            font-size: 10px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
         }
         .analytics-stat-val {
-            font-size: 15px;
-            font-weight: 700;
-            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
         }
         .analytics-stat-sub {
-            font-size: 9px;
-            color: var(--text-sub);
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
         }
 
-        /* Interactive SVG Chart Box */
+        /* Chart Card */
         .chart-box-card {
-            background: rgba(10, 16, 29, 0.85);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 14px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 10px;
             padding: 12px 14px;
             position: relative;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         .chart-svg-interactive {
             width: 100%;
@@ -615,38 +714,36 @@
             display: flex;
             justify-content: center;
             gap: 16px;
-            font-size: 10px;
-            color: var(--text-sub);
+            font-size: 11px;
+            color: var(--text-secondary);
             margin-top: 8px;
         }
         .chart-legend-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
         .chart-legend-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
         }
 
-        /* Floating Tooltip */
         .chart-tooltip-box {
             position: absolute;
             top: 10px;
             right: 14px;
-            background: rgba(18, 28, 48, 0.95);
-            border: 1px solid var(--ambi-teal);
-            border-radius: 8px;
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
             padding: 6px 10px;
-            font-size: 10px;
-            color: #fff;
+            font-size: 11px;
+            color: var(--text-primary);
             pointer-events: none;
-            backdrop-filter: blur(8px);
             display: none;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
             z-index: 20;
             line-height: 1.4;
+            font-variant-numeric: tabular-nums;
         }
 
         /* Timeline View */
@@ -666,10 +763,9 @@
         }
         .timeline-group-header {
             font-size: 11px;
-            font-weight: 700;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 0.2px;
             padding-left: 26px;
             position: relative;
         }
@@ -683,8 +779,8 @@
             left: 11px;
             top: 24px;
             bottom: -16px;
-            width: 2px;
-            background: rgba(255, 255, 255, 0.08);
+            width: 1px;
+            background-color: var(--border-hairline);
         }
         .timeline-item-card:last-child .timeline-connector {
             display: none;
@@ -696,18 +792,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--ambi-surface-border);
+            font-size: 11px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
             flex-shrink: 0;
             z-index: 2;
         }
         .timeline-card-body {
             flex: 1;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--ambi-surface-border);
-            border-radius: 10px;
-            padding: 9px 12px;
+            background-color: var(--surface-raised);
+            border: 1px solid var(--border-hairline);
+            border-radius: 8px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -718,80 +814,27 @@
             align-items: center;
         }
         .timeline-badge-pill {
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 10px;
-            text-transform: uppercase;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
         .timeline-card-title {
             font-size: 12px;
-            font-weight: 700;
-            color: #fff;
+            font-weight: 500;
+            color: var(--text-primary);
         }
         .timeline-card-reason {
             font-size: 11px;
-            color: var(--text-sub);
+            color: var(--text-secondary);
             line-height: 1.35;
         }
         .timeline-card-metrics {
-            font-size: 10px;
-            color: var(--text-dim);
-            margin-top: 2px;
-        }
-
-        /* Remote Sync Card */
-        .sync-card {
-            background: rgba(2, 132, 199, 0.08);
-            border: 1px solid rgba(2, 132, 199, 0.3);
-            border-radius: 12px;
-            padding: 12px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 12px;
-        }
-        .sync-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .sync-badge {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            background: rgba(56, 189, 248, 0.2);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.4);
-        }
-        .btn-sync {
-            flex: 1;
-            padding: 9px 10px;
-            border-radius: 8px;
             font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-variant-numeric: tabular-nums;
         }
-        .btn-sync-on {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.4);
-        }
-        .btn-sync-off {
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.35);
-        }
-        .btn-sync:active { opacity: 0.8; transform: scale(0.98); }
 
         /* Toast notification */
         .toast {
@@ -799,18 +842,17 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%) translateY(-20px);
-            background: rgba(18, 28, 48, 0.95);
-            border: 1px solid var(--ambi-teal);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 400;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 100;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -823,29 +865,47 @@
 </head>
 <body>
     <div class="app-frame">
-        <!-- Top Navigation Bar (Page 10) -->
+        <!-- Top Navigation Bar -->
         <div class="top-nav">
             <div class="nav-header">
                 <div class="nav-left">
-                    <button class="btn-back" onclick="openDrawer('drawerAnalytics')">←</button>
+                    <button class="btn-icon" onclick="openDrawer('drawerAnalytics')" title="Analytics" aria-label="Analytics">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
                     <div class="room-title-box">
-                        <div class="room-title">Living Room</div>
+                        <div class="room-title-row">
+                            <div class="room-title">Living Room</div>
+                            <span class="live-dot" title="เชื่อมต่อฮาร์ดแวร์ Ambi Climate 2 โดยตรง"></span>
+                        </div>
                         <div class="room-location">Home &bull; Ambi Climate 2</div>
                     </div>
                 </div>
-                <button class="btn-refresh" title="อ่านค่าเซนเซอร์สด (Query)" onclick="querySensorsNow()">
-                    <span id="refreshIcon">🔄</span>
+                <button class="btn-icon" title="อ่านค่าเซนเซอร์สด (Query)" onclick="querySensorsNow()" aria-label="Query Sensors">
+                    <span id="refreshIcon">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </span>
                 </button>
             </div>
 
-            <!-- Actual Room Conditions Bar (Page 10) -->
+            <!-- Conditions Bar -->
             <div class="conditions-bar">
                 <div class="condition-item">
-                    <span>🌡️</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>
+                    </svg>
                     <span id="roomTemp">--</span><span>°C</span>
                 </div>
                 <div class="condition-item">
-                    <span>💧</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                    </svg>
                     <span id="roomHum">--</span><span>%</span>
                 </div>
                 <div id="comfortPill" class="comfort-pill" onclick="openDrawer('drawerModes')">
@@ -854,33 +914,29 @@
             </div>
         </div>
 
-        <!-- 4-Hour Climate Curve Chart (Page 10) -->
+        <!-- 4-Hour Climate Curve Chart -->
         <div class="chart-section">
             <div class="chart-header">
                 <span id="chartHighHum">H 57.2%</span>
-                <span id="chartStatusText">อุณหภูมิ & ความชื้นย้อนหลัง 4 ชม.</span>
+                <span id="chartStatusText">ประวัติสภาพอากาศ 4 ชม.</span>
                 <span id="chartLowHum">L 45.0%</span>
             </div>
             <div class="chart-container">
-                <svg class="chart-svg" viewBox="0 0 400 90" preserveAspectRatio="none">
+                <svg class="chart-svg" viewBox="0 0 400 84" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id="humGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.3"/>
-                            <stop offset="100%" stop-color="#0284c7" stop-opacity="0.0"/>
-                        </linearGradient>
-                        <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#f87171" stop-opacity="0.3"/>
-                            <stop offset="100%" stop-color="#f87171" stop-opacity="0.0"/>
+                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.16"/>
+                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
                         </linearGradient>
                     </defs>
-                    <!-- Humidity Area & Line (Cyan/Blue) -->
-                    <path id="curveHumArea" d="M0,50 Q100,30 200,60 T400,40 L400,90 L0,90 Z" fill="url(#humGrad)"/>
-                    <path id="curveHum" d="M0,50 Q100,30 200,60 T400,40" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
-                    <!-- Temperature Line (Coral/Red) -->
-                    <path id="curveTemp" d="M0,70 Q100,65 200,45 T400,55" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round"/>
-                    <!-- Live marker dot -->
-                    <circle id="dotHum" cx="400" cy="40" r="4" fill="#38bdf8"/>
-                    <circle id="dotTemp" cx="400" cy="55" r="4" fill="#f87171"/>
+                    <!-- Humidity Area & Line -->
+                    <path id="curveHumArea" d="M0,45 Q100,28 200,52 T400,36 L400,84 L0,84 Z" fill="url(#humGrad)"/>
+                    <path id="curveHum" d="M0,45 Q100,28 200,52 T400,36" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/>
+                    <!-- Temperature Line -->
+                    <path id="curveTemp" d="M0,64 Q100,58 200,40 T400,48" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round"/>
+                    <!-- Live marker dots -->
+                    <circle id="dotHum" cx="400" cy="36" r="3" fill="#38bdf8"/>
+                    <circle id="dotTemp" cx="400" cy="48" r="3" fill="#f87171"/>
                 </svg>
             </div>
             <div class="chart-timeline">
@@ -888,79 +944,123 @@
                 <span>3h</span>
                 <span>2h</span>
                 <span>1h</span>
-                <span style="color: var(--ambi-teal); font-weight: 700;">Now</span>
+                <span style="color: var(--text-secondary); font-weight: 500;">Now</span>
             </div>
         </div>
 
-        <!-- Center Hero Dial / Bubble (Page 10) -->
+        <!-- Center Hero Dial -->
         <div class="dial-section">
             <div class="dial-bubble" id="dialBubble" onclick="openDrawer('drawerAC')">
-                <div class="dial-mode-badge" id="dialModeBadge">COMFORT MODE</div>
+                <div class="dial-mode-badge" id="dialModeBadge">Comfort Mode &bull; AC On</div>
                 <div class="dial-label" id="dialLabel">comfortable</div>
                 <div class="dial-sub" id="dialSub">Feels 25.0°C &bull; AC 24°C</div>
                 <div class="dial-hint" id="dialHint">แตะเพื่อปรับแอร์ Daikin</div>
             </div>
         </div>
 
-        <!-- Interactive AI Comfort Feedback Row (Page 10) -->
+        <!-- Comfort Feedback Row -->
         <div class="feedback-section">
-            <div class="feedback-title">🎯 ตอนนี้คุณรู้สึกอย่างไร? (สอน AI ปรับจูน)</div>
+            <div class="feedback-title">ระดับความสบาย (Comfort Feedback)</div>
             <div class="feedback-grid">
                 <button class="btn-chip" onclick="sendFeedback('freezing')">
-                    <span class="emoji">🥶</span>
+                    <span class="chip-step">-2</span>
                     <span>หนาวมาก</span>
                 </button>
                 <button class="btn-chip" onclick="sendFeedback('cold')">
-                    <span class="emoji">❄️</span>
+                    <span class="chip-step">-1</span>
                     <span>หนาวไป</span>
                 </button>
-                <button class="btn-chip" style="background: rgba(0, 196, 180, 0.15); border-color: rgba(0, 196, 180, 0.4);" onclick="sendFeedback('comfy')">
-                    <span class="emoji">😊</span>
+                <button class="btn-chip chip-center" onclick="sendFeedback('comfy')">
+                    <span class="chip-step">0</span>
                     <span>สบายดี</span>
                 </button>
                 <button class="btn-chip" onclick="sendFeedback('warm')">
-                    <span class="emoji">🌤️</span>
+                    <span class="chip-step">+1</span>
                     <span>ร้อนไป</span>
                 </button>
                 <button class="btn-chip" onclick="sendFeedback('hot')">
-                    <span class="emoji">🥵</span>
+                    <span class="chip-step">+2</span>
                     <span>ร้อนมาก</span>
                 </button>
             </div>
         </div>
 
-        <!-- Bottom Navigation Bar (Page 10: 4 Iconic Tabs) -->
+        <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
             <button class="nav-tab" onclick="openDrawer('drawerAnalytics')">
-                <span class="nav-tab-icon">📊</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
                 <span>Analytics</span>
             </button>
             <button class="nav-tab" onclick="openDrawer('drawerAC')">
-                <span class="nav-tab-icon">🎚️</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="21" x2="4" y2="14"></line>
+                    <line x1="4" y1="10" x2="4" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12" y2="3"></line>
+                    <line x1="20" y1="21" x2="20" y2="16"></line>
+                    <line x1="20" y1="12" x2="20" y2="3"></line>
+                    <line x1="1" y1="14" x2="7" y2="14"></line>
+                    <line x1="9" y1="8" x2="15" y2="8"></line>
+                    <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
                 <span>AC Settings</span>
             </button>
             <button class="nav-tab" onclick="openDrawer('drawerDevice')">
-                <span class="nav-tab-icon">📱</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                    <rect x="9" y="9" width="6" height="6"></rect>
+                    <line x1="9" y1="1" x2="9" y2="4"></line>
+                    <line x1="15" y1="1" x2="15" y2="4"></line>
+                    <line x1="9" y1="20" x2="9" y2="23"></line>
+                    <line x1="15" y1="20" x2="15" y2="23"></line>
+                    <line x1="20" y1="9" x2="23" y2="9"></line>
+                    <line x1="20" y1="14" x2="23" y2="14"></line>
+                    <line x1="1" y1="9" x2="4" y2="9"></line>
+                    <line x1="1" y1="14" x2="4" y2="14"></line>
+                </svg>
                 <span>Device</span>
             </button>
             <button class="nav-tab" onclick="openDrawer('drawerModes')">
-                <span class="nav-tab-icon">⚡</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                </svg>
                 <span>Modes</span>
             </button>
         </div>
 
         <!-- ---------------------------------------------------- -->
-        <!-- DRAWER 1: AC SETTINGS (Exact replica of Page 14)     -->
+        <!-- DRAWER 1: AC SETTINGS                                -->
         <!-- ---------------------------------------------------- -->
         <div class="drawer-overlay" id="drawerAC" onclick="handleOverlayClick(event, 'drawerAC')">
             <div class="drawer-content">
                 <div class="drawer-header">
-                    <div class="drawer-title">🎚️ AC Settings (Daikin ARC480A46)</div>
-                    <button class="btn-close" onclick="closeDrawer('drawerAC')">✕</button>
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                            <line x1="4" y1="21" x2="4" y2="14"></line>
+                            <line x1="4" y1="10" x2="4" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12" y2="3"></line>
+                            <line x1="20" y1="21" x2="20" y2="16"></line>
+                            <line x1="20" y1="12" x2="20" y2="3"></line>
+                            <line x1="1" y1="14" x2="7" y2="14"></line>
+                            <line x1="9" y1="8" x2="15" y2="8"></line>
+                            <line x1="17" y1="16" x2="23" y2="16"></line>
+                        </svg>
+                        <div class="drawer-title">AC Settings (Daikin ARC480A46)</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerAC')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
 
-                <div style="font-size: 12px; color: var(--text-sub); line-height: 1.4;">
-                    Ambi Climate is in <b id="acDrawerModeText" style="color: var(--ambi-teal);">Comfort Mode</b> and controlling Daikin AC via IR Port 4998.
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">
+                    Ambi Climate อยู่ในโหมด <span id="acDrawerModeText" style="color: var(--text-primary); font-weight: 500;">Comfort Mode</span> ควบคุมแอร์ Daikin ผ่าน IR Port 4998
                 </div>
 
                 <!-- Temperature Stepper -->
@@ -973,7 +1073,7 @@
                     </div>
                 </div>
 
-                <!-- Fan Speed (Page 14) -->
+                <!-- Fan Speed -->
                 <div class="control-group">
                     <div class="control-label">Fan Speed</div>
                     <div class="btn-toggle-group">
@@ -985,7 +1085,7 @@
                     </div>
                 </div>
 
-                <!-- Louver / Swing (Page 14) -->
+                <!-- Louver / Swing -->
                 <div class="control-group">
                     <div class="control-label">Louver / Swing</div>
                     <div class="btn-toggle-group">
@@ -998,30 +1098,30 @@
                 </div>
 
                 <!-- Power Controls -->
-                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
                     <button class="btn-action" onclick="setAC({power:'On', temp:24, mode:'Cool'})">
-                        ❄️ เปิดแอร์ (Cool 24°C)
+                        เปิดแอร์ Cool 24°C
                     </button>
                     <button class="btn-action btn-danger" onclick="setAC({power:'Off'})">
-                        🔴 ปิดแอร์ (OFF)
+                        ปิดแอร์
                     </button>
                 </div>
 
                 <!-- Physical Remote Sync Box -->
                 <div class="sync-card">
                     <div class="sync-header">
-                        <span>🔄 ซิงค์สถานะรีโมทจริง (Remote Sync)</span>
-                        <span id="remoteSyncBadge" class="sync-badge">สถานะ: แอร์ปิด (OFF)</span>
+                        <span>ซิงค์สถานะรีโมท (Remote State Sync)</span>
+                        <span id="remoteSyncBadge" class="sync-badge">แอร์ปิดอยู่</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-sub); line-height: 1.4;">
-                        หากเปิด/ปิดแอร์ด้วยรีโมทจริง ให้กดปุ่มนี้เพื่อซิงค์สถานะเข้าสู่ระบบ Ambi โดยไม่ต้องส่งสัญญาณซ้ำ AI จะได้ทำงานต่อถูกต้อง
+                    <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+                        หากเปิด/ปิดแอร์ด้วยรีโมทจริง ให้กดปุ่มนี้เพื่อปรับสถานะระบบให้ตรงกันโดยไม่ต้องส่งสัญญาณ IR ซ้ำ
                     </div>
                     <div style="display: flex; gap: 8px; margin-top: 4px;">
                         <button class="btn-sync btn-sync-on" onclick="syncRemotePower('On')">
-                            🟢 ซิงค์เป็น: แอร์เปิดอยู่ (ON)
+                            แอร์เปิดอยู่ (On)
                         </button>
                         <button class="btn-sync btn-sync-off" onclick="syncRemotePower('Off')">
-                            ⚪ ซิงค์เป็น: แอร์ปิดอยู่ (OFF)
+                            แอร์ปิดอยู่ (Off)
                         </button>
                     </div>
                 </div>
@@ -1029,53 +1129,64 @@
         </div>
 
         <!-- ---------------------------------------------------- -->
-        <!-- DRAWER 2: MODES (Exact replica of Page 11)           -->
+        <!-- DRAWER 2: MODES                                      -->
         <!-- ---------------------------------------------------- -->
         <div class="drawer-overlay" id="drawerModes" onclick="handleOverlayClick(event, 'drawerModes')">
             <div class="drawer-content">
                 <div class="drawer-header">
-                    <div class="drawer-title">⚡ Ambi Climate Modes</div>
-                    <button class="btn-close" onclick="closeDrawer('drawerModes')">✕</button>
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                        </svg>
+                        <div class="drawer-title">Ambi Climate Modes</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerModes')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
                     <!-- Comfort Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Comfort')">
-                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🌟 Comfort Mode (AI Auto-Tune)</div>
-                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                            Give feedback to personalize comfort. AI continuously auto-tunes Daikin AC based on Humidex.
+                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Comfort')">
+                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Comfort Mode (AI Auto-Tune)</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            ระบบ AI ปรับจูนอุณหภูมิและความชื้นสัมพันธ์ (Humidex) ตาม Feedback อัตโนมัติ
                         </div>
                     </div>
 
                     <!-- Temperature Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Temperature')">
-                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🎯 Temperature Mode</div>
-                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                            Select a set target temperature. Ambi Climate maintains precise temperature target.
+                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Temperature')">
+                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Temperature Mode</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            ตั้งเป้าหมายอุณหภูมิที่แน่นอน Ambi Climate จะรักษาระดับอุณหภูมิตามที่กำหนด
                         </div>
                     </div>
 
                     <!-- Manual Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Manual')">
-                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🕹️ Manual Mode</div>
-                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                            Controls your AC as you would with your normal remote without smart AI automation.
+                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Manual')">
+                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Manual Mode</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            ควบคุมแอร์ Daikin โดยตรงเสมือนกดรีโมทคอนโทรลโดยไม่เปิดระบบ AI
                         </div>
                     </div>
 
                     <!-- Away Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Away')">
-                        <div style="font-weight: 700; color: #fff; font-size: 14px;">🏡 Away Mode</div>
-                        <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
-                            Energy-saving climate monitoring while away from home.
+                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Away')">
+                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Away Mode</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            เฝ้าระวังสภาพอากาศเพื่อประหยัดพลังงานในขณะที่ไม่อยู่บ้าน
                         </div>
                     </div>
 
                     <!-- OFF Mode -->
-                    <div class="btn-opt btn-danger" style="text-align: left; padding: 12px;" onclick="switchAmbiMode('Off')">
-                        <div style="font-weight: 700; font-size: 14px;">🔴 OFF Mode</div>
-                        <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">
-                            Turns off your Daikin air conditioner completely.
+                    <div class="btn-opt btn-danger" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Off')">
+                        <div style="font-weight: 500; font-size: 13px;">Off Mode</div>
+                        <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
+                            ปิดการทำงานของแอร์ Daikin ทั้งหมด
                         </div>
                     </div>
                 </div>
@@ -1083,99 +1194,118 @@
         </div>
 
         <!-- ---------------------------------------------------- -->
-        <!-- DRAWER 3: DEVICE (LED, SENSORS, CLOUD, LOGS)        -->
+        <!-- DRAWER 3: DEVICE SETTINGS                            -->
         <!-- ---------------------------------------------------- -->
         <div class="drawer-overlay" id="drawerDevice" onclick="handleOverlayClick(event, 'drawerDevice')">
             <div class="drawer-content">
                 <div class="drawer-header">
-                    <div class="drawer-title">📱 Ambi Climate 2 Device Settings</div>
-                    <button class="btn-close" onclick="closeDrawer('drawerDevice')">✕</button>
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                            <rect x="9" y="9" width="6" height="6"></rect>
+                            <line x1="9" y1="1" x2="9" y2="4"></line>
+                            <line x1="15" y1="1" x2="15" y2="4"></line>
+                            <line x1="9" y1="20" x2="9" y2="23"></line>
+                            <line x1="15" y1="20" x2="15" y2="23"></line>
+                            <line x1="20" y1="9" x2="23" y2="9"></line>
+                            <line x1="20" y1="14" x2="23" y2="14"></line>
+                            <line x1="1" y1="9" x2="4" y2="9"></line>
+                            <line x1="1" y1="14" x2="4" y2="14"></line>
+                        </svg>
+                        <div class="drawer-title">Device Settings (Ambi Climate 2)</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerDevice')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
 
-                <!-- 1. Front LED Brightness (Menu according to user request) -->
+                <!-- 1. Front LED Brightness -->
                 <div class="control-group">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="control-label">💡 ปรับความสว่างหลอดไฟ LED หน้าเครื่อง</span>
-                        <span id="brightnessValText" style="font-size: 13px; font-weight: 700; color: var(--ambi-teal);">5700 (57%)</span>
+                        <span class="control-label">ความสว่างไฟสถานะหน้าเครื่อง</span>
+                        <span id="brightnessValText" style="font-size: 12px; font-weight: 500; color: var(--text-primary); font-variant-numeric: tabular-nums;">5700 (57%)</span>
                     </div>
                     <input type="range" id="brightnessSlider" min="0" max="10000" step="500" value="5700" 
-                           style="width: 100%; accent-color: var(--ambi-teal); cursor: pointer; margin: 6px 0;" 
+                           style="width: 100%; accent-color: var(--accent); cursor: pointer; margin: 4px 0;" 
                            onmousedown="window.isDraggingBrightness=true" onmouseup="window.isDraggingBrightness=false"
                            ontouchstart="window.isDraggingBrightness=true" ontouchend="window.isDraggingBrightness=false"
                            onchange="window.isDraggingBrightness=false; changeBrightness(this.value);" oninput="updateBrightnessLabel(this.value)">
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(0)">🌑 ปิดไฟ 0%</button>
-                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(2500)">🌙 หรี่ 25%</button>
-                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(5700)">🟢 ปกติ 57%</button>
-                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(10000)">☀️ สุด 100%</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(0)">ปิด (0%)</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(2500)">หรี่ (25%)</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(5700)">ปกติ (57%)</button>
+                        <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(10000)">สุด (100%)</button>
                     </div>
-                    <button class="btn-action" style="background: #10b981; margin-top: 4px;" onclick="setLedGreen()">
-                        🟢 สั่งไฟหน้าเครื่องเป็นสีเขียว (Solid Green)
+                    <button class="btn-action btn-secondary" style="margin-top: 4px;" onclick="setLedGreen()">
+                        ตั้งค่าไฟสีเขียว (Solid Green)
                     </button>
                 </div>
 
                 <!-- 2. On-Demand Sensor Query & Background Pull Query -->
-                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="control-label">🌡️ เซนเซอร์อุณหภูมิ & ความชื้น (Port 8070)</span>
-                        <span id="pollingBadge" class="comfort-pill" style="font-size: 10px; cursor: pointer;" onclick="togglePolling()">🔄 Auto Pull: ON (20s)</span>
+                        <span class="control-label">เซนเซอร์สภาพอากาศ (Port 8070)</span>
+                        <span id="pollingBadge" class="comfort-pill" style="font-size: 10px; cursor: pointer;" onclick="togglePolling()">Auto Pull: ON (20s)</span>
                     </div>
-                    <button class="btn-action" style="background: #0284c7; margin-top: 6px;" onclick="querySensorsNow()">
-                        🔄 Query อุณหภูมิ & ความชื้นสดเดี๋ยวนี้ (:8070)
+                    <button class="btn-action btn-secondary" style="margin-top: 4px;" onclick="querySensorsNow()">
+                        อ่านค่าเซนเซอร์สด (Query Now)
                     </button>
-                    <div id="sensorDetailText" style="font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 4px;">
+                    <div id="sensorDetailText" style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px; font-variant-numeric: tabular-nums;">
                         Auto Pull Active &bull; อัปเดตล่าสุด: --
                     </div>
                 </div>
 
                 <!-- 3. Cloud Target Redirect (NCE / NCD) -->
-                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
-                    <div class="control-label">☁️ จัดการ Cloud Server (NCE / NCD)</div>
-                    <div style="font-size: 11px; color: var(--text-sub);">
-                        เป้าหมายปัจจุบัน: <b id="currentCloudTarget" style="color: var(--ambi-teal);">กำลังตรวจสอบ...</b>
+                <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
+                    <div class="control-label">ปลายทาง Cloud Server (NCE / NCD)</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">
+                        ปลายทางปัจจุบัน: <span id="currentCloudTarget" style="color: var(--text-primary); font-weight: 500;">กำลังตรวจสอบ...</span>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;">
-                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8867')">ชี้มาเครื่องนี้ (:8867 TLS)</button>
-                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8866')">ชี้มาเครื่องนี้ (:8866 TCP)</button>
-                        <button class="btn-opt" style="font-size: 11px;" onclick="reconnectCloud()">⚡ สั่ง NCD ต่อใหม่</button>
-                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('connect.smartambi.com:8867')">↩️ คืนค่า Cloud HK</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8867')">เครื่องนี้ (:8867 TLS)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud((window.netHostIp || window.location.hostname) + ':8866')">เครื่องนี้ (:8866 TCP)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="reconnectCloud()">สั่งเชื่อมต่อใหม่ (NCD)</button>
+                        <button class="btn-opt" style="font-size: 11px;" onclick="changeCloud('connect.smartambi.com:8867')">คืนค่าเซิร์ฟเวอร์ HK</button>
                     </div>
                 </div>
 
                 <!-- 4. System Dump Log (NSL) -->
-                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
-                    <button class="btn-action" style="background: #4f46e5;" onclick="viewSystemLog()">
-                        📋 ดึงดู System Dump Log ของ Ambi (NSL)
+                <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
+                    <button class="btn-action btn-secondary" onclick="viewSystemLog()">
+                        แสดงบันทึกระบบ (System Dump Log)
                     </button>
-                    <pre id="syslogModal" style="display: none; background: #070c17; padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-size: 10px; color: #38bdf8; border: 1px solid var(--ambi-surface-border); white-space: pre-wrap; font-family: monospace;"></pre>
+                    <pre id="syslogModal" style="display: none; background-color: var(--surface-deep); padding: 10px; border-radius: 6px; max-height: 200px; overflow-y: auto; font-size: 10px; color: var(--text-secondary); border: 1px solid var(--border-hairline); white-space: pre-wrap; font-family: monospace;"></pre>
                 </div>
 
-                <!-- 5. Auto Network Configuration -->
-                <div class="control-group" style="border-top: 1px solid var(--ambi-surface-border); padding-top: 12px;">
+                <!-- 5. Network Configuration -->
+                <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="control-label">🌐 การเชื่อมต่อเครือข่าย (Auto Detected)</span>
-                        <button class="btn-opt" style="padding: 4px 8px; font-size: 11px; flex: 0 0 auto;" onclick="detectNetworkNow()">🔄 Auto Detect</button>
+                        <span class="control-label">สถานะการเชื่อมต่อเครือข่าย</span>
+                        <button class="btn-opt" style="padding: 4px 8px; font-size: 11px; flex: 0 0 auto;" onclick="detectNetworkNow()">Auto Detect</button>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ambi-surface-border); border-radius: 10px; padding: 10px; margin-top: 4px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; background-color: var(--surface-deep); border: 1px solid var(--border-hairline); border-radius: 8px; padding: 10px; margin-top: 4px; font-variant-numeric: tabular-nums;">
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">Host LAN IP:</span>
-                            <b id="netHostIp" style="color: var(--ambi-teal);">--</b>
+                            <span style="color: var(--text-muted);">Host LAN IP:</span>
+                            <span id="netHostIp" style="color: var(--text-primary); font-weight: 500;">--</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">Default Gateway:</span>
-                            <b id="netGatewayIp" style="color: #fff;">--</b>
+                            <span style="color: var(--text-muted);">Default Gateway:</span>
+                            <span id="netGatewayIp" style="color: var(--text-primary);">--</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">Router WAN IP:</span>
-                            <b id="netWanIp" style="color: #38bdf8;">--</b>
+                            <span style="color: var(--text-muted);">Router WAN IP:</span>
+                            <span id="netWanIp" style="color: var(--text-primary);">--</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">DNS Redirect:</span>
-                            <b id="netDnsIp" style="color: #a78bfa;">--</b>
+                            <span style="color: var(--text-muted);">DNS Redirect:</span>
+                            <span id="netDnsIp" style="color: var(--text-secondary);">--</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-dim);">Ambi Device IP:</span>
-                            <b id="netAmbiIp" style="color: #34d399;">--</b>
+                            <span style="color: var(--text-muted);">Ambi Device IP:</span>
+                            <span id="netAmbiIp" style="color: var(--status-green);">--</span>
                         </div>
                     </div>
                 </div>
@@ -1183,22 +1313,32 @@
         </div>
 
         <!-- ---------------------------------------------------- -->
-        <!-- DRAWER 4: ANALYTICS (HISTORY & INSIGHTS Page 15)     -->
+        <!-- DRAWER 4: ANALYTICS & TIMELINE                       -->
         <!-- ---------------------------------------------------- -->
         <div class="drawer-overlay" id="drawerAnalytics" onclick="handleOverlayClick(event, 'drawerAnalytics')">
             <div class="drawer-content" style="max-height: 88vh;">
                 <div class="drawer-header">
-                    <div class="drawer-title">📊 Analytics & Deployments</div>
-                    <button class="btn-close" onclick="closeDrawer('drawerAnalytics')">✕</button>
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        <div class="drawer-title">Analytics & Activity</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerAnalytics')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Sub-nav Tabs -->
                 <div class="sub-nav-tabs">
                     <button class="sub-nav-btn active" id="tabBtnHistory" onclick="switchAnalyticsTab('history')">
-                        📈 กราฟสภาพอากาศ (History)
+                        กราฟสภาพอากาศ
                     </button>
                     <button class="sub-nav-btn" id="tabBtnTimeline" onclick="switchAnalyticsTab('timeline')">
-                        ⏱️ ไทม์ไลน์กิจกรรม (Timeline)
+                        ประวัติกิจกรรม
                     </button>
                 </div>
 
@@ -1206,7 +1346,7 @@
                 <div id="analyticsHistoryView">
                     <!-- Range Selector -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 11px; color: var(--text-sub);">ช่วงเวลาย้อนหลัง</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">ช่วงเวลาย้อนหลัง</span>
                         <div class="range-bar">
                             <button class="range-chip active" id="range4h" onclick="changeAnalyticsRange('4h')">4 ชม.</button>
                             <button class="range-chip" id="range24h" onclick="changeAnalyticsRange('24h')">24 ชม.</button>
@@ -1217,17 +1357,17 @@
                     <!-- Stat Cards Grid -->
                     <div class="analytics-stat-grid">
                         <div class="analytics-stat-card">
-                            <span class="analytics-stat-title">🌡️ อุณหภูมิ</span>
+                            <span class="analytics-stat-title">อุณหภูมิ</span>
                             <span class="analytics-stat-val" id="statTempCurrent">--°C</span>
                             <span class="analytics-stat-sub" id="statTempMinMax">L -- | H --</span>
                         </div>
                         <div class="analytics-stat-card">
-                            <span class="analytics-stat-title">💧 ความชื้น</span>
+                            <span class="analytics-stat-title">ความชื้น</span>
                             <span class="analytics-stat-val" id="statHumCurrent">--%</span>
                             <span class="analytics-stat-sub" id="statHumMinMax">L -- | H --</span>
                         </div>
                         <div class="analytics-stat-card">
-                            <span class="analytics-stat-title">🍃 HUMIDEX</span>
+                            <span class="analytics-stat-title">Humidex</span>
                             <span class="analytics-stat-val" id="statHxCurrent">--°C</span>
                             <span class="analytics-stat-sub" id="statHxStatus">สบาย</span>
                         </div>
@@ -1241,24 +1381,24 @@
                         </svg>
                         <div class="chart-legend-row">
                             <div class="chart-legend-item">
-                                <span class="chart-legend-dot" style="background: #f87171;"></span>
+                                <span class="chart-legend-dot" style="background-color: var(--temp-coral);"></span>
                                 <span>อุณหภูมิ (°C)</span>
                             </div>
                             <div class="chart-legend-item">
-                                <span class="chart-legend-dot" style="background: #38bdf8;"></span>
+                                <span class="chart-legend-dot" style="background-color: var(--hum-cyan);"></span>
                                 <span>ความชื้น (%)</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB 2: ACTIVITY TIMELINE (DEPLOYMENTS) VIEW -->
+                <!-- TAB 2: ACTIVITY TIMELINE VIEW -->
                 <div id="analyticsTimelineView" style="display: none;">
-                    <div style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">
-                        บันทึกประวัติการปรับจูน AI, คำสั่งรีโมท และการซิงค์สถานะแอร์จาก SQLite
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+                        บันทึกประวัติการปรับจูน AI คำสั่งรีโมท และการซิงค์สถานะแอร์จากฐานข้อมูล
                     </div>
                     <div class="timeline-scroll" id="timelineList">
-                        <div style="text-align: center; padding: 25px; color: var(--text-dim); font-size: 12px;">
+                        <div style="text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px;">
                             กำลังโหลดไทม์ไลน์...
                         </div>
                     </div>
@@ -1269,7 +1409,9 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast">
-        <span>✅</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--status-green);">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
         <span id="toastMsg">ส่งสัญญาณเรียบร้อย</span>
     </div>
 
@@ -1316,9 +1458,6 @@
                 // Comfort Pill & Badge
                 const pill = document.getElementById('comfortPill');
                 pill.innerText = data.comfort.label || 'comfortable';
-                pill.style.color = data.comfort.badge_color;
-                pill.style.borderColor = data.comfort.badge_color + '66';
-                pill.style.background = data.comfort.badge_color + '22';
 
                 // 2. Dial Bubble State
                 const dial = document.getElementById('dialBubble');
@@ -1328,24 +1467,21 @@
                 const isACOn = (data.ac_state.power && data.ac_state.power.toLowerCase() === 'on');
                 const ambiMode = data.ac_state.ambi_mode || 'Comfort';
 
-                dialBadge.innerHTML = (ambiMode.toUpperCase() + ' MODE') + (isACOn ? ' &bull; AC ON' : ' &bull; AC OFF');
+                dialBadge.innerHTML = ambiMode + ' Mode &bull; ' + (isACOn ? 'AC On' : 'AC Off');
                 document.getElementById('acDrawerModeText').innerText = ambiMode + ' Mode';
 
                 if (!isACOn) {
-                    dialLabel.innerText = 'OFF';
+                    dialLabel.innerText = 'Off';
                     dialSub.innerText = 'แอร์ปิดอยู่ • แตะเพื่อเปิดแอร์';
-                    dial.style.borderColor = '#64748b';
-                    dial.style.boxShadow = '0 0 25px rgba(100, 116, 139, 0.2)';
+                    dial.style.borderColor = 'var(--border-subtle)';
                 } else if (ambiMode === 'Comfort') {
                     dialLabel.innerText = data.comfort.label || 'comfortable';
                     dialSub.innerText = `Feels ${data.comfort.humidex || '--'}°C • Target ${data.comfort.target_humidex || 26}°C`;
-                    dial.style.borderColor = data.comfort.badge_color;
-                    dial.style.boxShadow = '0 0 35px ' + data.comfort.badge_color + '44';
+                    dial.style.borderColor = 'rgba(0, 184, 169, 0.4)';
                 } else {
                     dialLabel.innerText = data.ac_state.temperature + '°C';
                     dialSub.innerText = `Mode: ${data.ac_state.mode} • Fan: ${data.ac_state.fan}`;
-                    dial.style.borderColor = '#0284c7';
-                    dial.style.boxShadow = '0 0 35px rgba(2, 132, 199, 0.35)';
+                    dial.style.borderColor = 'rgba(56, 189, 248, 0.4)';
                 }
 
                 // 3. AC Drawer Controls
@@ -1385,15 +1521,15 @@
                 const syncBadge = document.getElementById('remoteSyncBadge');
                 if (syncBadge) {
                     if (isACOn) {
-                        syncBadge.innerText = 'สถานะ: แอร์เปิด (ON)';
-                        syncBadge.style.color = '#34d399';
-                        syncBadge.style.background = 'rgba(16, 185, 129, 0.2)';
-                        syncBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                        syncBadge.innerText = 'แอร์เปิดอยู่ (On)';
+                        syncBadge.style.color = '#4cc38a';
+                        syncBadge.style.backgroundColor = 'rgba(76, 195, 138, 0.15)';
+                        syncBadge.style.borderColor = 'rgba(76, 195, 138, 0.3)';
                     } else {
-                        syncBadge.innerText = 'สถานะ: แอร์ปิด (OFF)';
-                        syncBadge.style.color = '#94a3b8';
-                        syncBadge.style.background = 'rgba(255, 255, 255, 0.05)';
-                        syncBadge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        syncBadge.innerText = 'แอร์ปิดอยู่ (Off)';
+                        syncBadge.style.color = 'var(--text-muted)';
+                        syncBadge.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                        syncBadge.style.borderColor = 'var(--border-hairline)';
                     }
                 }
 
@@ -1406,7 +1542,7 @@
                     }
                 }
 
-                // 8. Update Home Curve Chart from SQLite
+                // 8. Update Home Curve Chart
                 updateHomeCurve();
 
                 // 9. If Analytics Drawer is open, refresh active tab
@@ -1422,14 +1558,14 @@
 
         // Feedback to AI (Teaching Mode)
         async function sendFeedback(choice) {
-            showToast('⏳ กำลังสอน AI & ปรับแอร์ Daikin...');
+            showToast('กำลังสอน AI ปรับจูน...');
             try {
                 const res = await fetch('/api/feedback?choice=' + encodeURIComponent(choice));
                 const json = await res.json();
-                showToast('✅ ' + (json.action || 'บันทึกสำเร็จ'));
+                showToast(json.action || 'บันทึกสำเร็จ');
                 updateDashboard();
             } catch (e) {
-                showToast('❌ ส่งข้อมูลไม่สำเร็จ');
+                showToast('ส่งข้อมูลไม่สำเร็จ');
             }
         }
 
@@ -1452,54 +1588,52 @@
 
         // General AC command dispatch
         async function setAC(params) {
-            showToast('📡 กำลังยิงสัญญาณ IR Daikin...');
+            showToast('กำลังส่งสัญญาณ IR Daikin...');
             const q = new URLSearchParams(params).toString();
             try {
                 const res = await fetch('/api/control?' + q);
                 const json = await res.json();
-                showToast('✅ Daikin IR ตอบรับ: ' + (json.ir_result || 'OK'));
+                showToast('Daikin IR: ' + (json.ir_result || 'OK'));
                 updateDashboard();
             } catch (e) {
-                showToast('❌ ส่งสัญญาณไม่สำเร็จ');
+                showToast('ส่งสัญญาณไม่สำเร็จ');
             }
         }
 
-        // Ambi Modes switcher (Page 11)
+        // Ambi Modes switcher
         async function switchAmbiMode(mode) {
-            showToast('⚡ สลับโหมดเป็น ' + mode + ' Mode...');
+            showToast('สลับเป็น ' + mode + ' Mode...');
             try {
                 const res = await fetch('/api/mode?mode=' + encodeURIComponent(mode));
                 const json = await res.json();
-                showToast('✅ ใช้งาน ' + json.ambi_mode + ' Mode เรียบร้อย');
+                showToast('ใช้งาน ' + json.ambi_mode + ' Mode เรียบร้อย');
                 closeDrawer('drawerModes');
                 updateDashboard();
             } catch (e) {
-                showToast('❌ สลับโหมดไม่สำเร็จ');
+                showToast('สลับโหมดไม่สำเร็จ');
             }
         }
 
         // On-demand Sensor Query
         async function querySensorsNow() {
-            const icon = document.getElementById('refreshIcon');
-            if (icon) icon.style.display = 'inline-block';
-            showToast('🔄 กำลังอ่านค่าเซนเซอร์สดจาก Ambi :8070...');
+            showToast('กำลังอ่านค่าเซนเซอร์สดจาก Ambi :8070...');
             try {
                 const res = await fetch('/api/sensors/query');
                 const data = await res.json();
                 if (data.status === 'OK') {
-                    showToast(`✅ อัปเดตเซนเซอร์: ${data.room_temp}°C | ${data.room_humidity}%`);
+                    showToast(`อัปเดตเซนเซอร์: ${data.room_temp}°C | ${data.room_humidity}%`);
                     updateDashboard();
                 } else {
-                    showToast('❌ ' + (data.message || 'อ่านค่าไม่สำเร็จ'));
+                    showToast(data.message || 'อ่านค่าไม่สำเร็จ');
                 }
             } catch (e) {
-                showToast('❌ เชื่อมต่อล้มเหลว');
+                showToast('เชื่อมต่อล้มเหลว');
             }
         }
 
         // Toggle Auto Polling
         async function togglePolling() {
-            showToast('⏳ กำลังสลับสถานะ Auto Pull...');
+            showToast('กำลังสลับสถานะ Auto Pull...');
             try {
                 const cur = document.getElementById('pollingBadge').innerText.includes('ON');
                 const next = cur ? 0 : 1;
@@ -1507,20 +1641,20 @@
                 const data = await res.json();
                 const badge = document.getElementById('pollingBadge');
                 if (data.polling_enabled) {
-                    badge.innerText = '🔄 Auto Pull: ON (20s)';
-                    badge.style.color = 'var(--ambi-teal)';
-                    badge.style.borderColor = 'rgba(0, 196, 180, 0.4)';
-                    badge.style.background = 'rgba(0, 196, 180, 0.2)';
-                    showToast('✅ เปิดการดึงข้อมูลอัตโนมัติ (Pull Query ทุก 20 วิ)');
+                    badge.innerText = 'Auto Pull: ON (20s)';
+                    badge.style.color = 'var(--accent)';
+                    badge.style.borderColor = 'rgba(0, 184, 169, 0.4)';
+                    badge.style.backgroundColor = 'var(--accent-dim)';
+                    showToast('เปิดการดึงข้อมูลอัตโนมัติ (ทุก 20 วิ)');
                 } else {
-                    badge.innerText = '⚪ Auto Pull: OFF';
-                    badge.style.color = 'var(--text-dim)';
-                    badge.style.borderColor = 'var(--ambi-surface-border)';
-                    badge.style.background = 'rgba(255, 255, 255, 0.05)';
-                    showToast('⚪ ปิดการดึงข้อมูลอัตโนมัติ');
+                    badge.innerText = 'Auto Pull: OFF';
+                    badge.style.color = 'var(--text-muted)';
+                    badge.style.borderColor = 'var(--border-hairline)';
+                    badge.style.backgroundColor = 'var(--surface-raised)';
+                    showToast('ปิดการดึงข้อมูลอัตโนมัติ');
                 }
             } catch(e) {
-                showToast('❌ ไม่สามารถสลับสถานะได้');
+                showToast('ไม่สามารถสลับสถานะได้');
             }
         }
 
@@ -1537,33 +1671,33 @@
         }
 
         async function changeBrightness(val) {
-            showToast(`💡 ปรับความสว่าง LED เป็น ${val}...`);
+            showToast(`ปรับความสว่าง LED เป็น ${val}...`);
             try {
                 const res = await fetch('/api/led/brightness?level=' + encodeURIComponent(val));
                 const json = await res.json();
                 if (json.status === 'OK') {
                     const pct = Math.round(val / 100);
-                    showToast(val <= 0 ? '🌑 ปิดไฟ LED เรียบร้อย' : `💡 ปรับความสว่างเป็น ${pct}% แล้ว`);
+                    showToast(val <= 0 ? 'ปิดไฟ LED เรียบร้อย' : `ปรับความสว่างเป็น ${pct}% แล้ว`);
                 } else {
-                    showToast('❌ ปรับความสว่างไม่สำเร็จ');
+                    showToast('ปรับความสว่างไม่สำเร็จ');
                 }
             } catch (e) {
-                showToast('❌ เชื่อมต่อล้มเหลว');
+                showToast('เชื่อมต่อล้มเหลว');
             }
         }
 
         async function setLedGreen() {
-            showToast('🟢 กำลังส่งคำสั่งไฟเขียว Solid Green...');
+            showToast('กำลังส่งคำสั่ง Solid Green...');
             try {
                 const res = await fetch('/api/led/green');
                 const json = await res.json();
                 if (json.status === 'OK') {
-                    showToast('✅ หลอดไฟหน้าเครื่องเป็นสีเขียวแล้ว!');
+                    showToast('ไฟสถานะเป็นสีเขียวเรียบร้อย');
                 } else {
-                    showToast('❌ ส่งคำสั่งไม่สำเร็จ');
+                    showToast('ส่งคำสั่งไม่สำเร็จ');
                 }
             } catch (e) {
-                showToast('❌ เกิดข้อผิดพลาด');
+                showToast('เกิดข้อผิดพลาด');
             }
         }
 
@@ -1577,46 +1711,46 @@
         }
 
         async function changeCloud(server) {
-            showToast('🚀 กำลังเปลี่ยน Cloud Server...');
+            showToast('กำลังเปลี่ยน Cloud Server...');
             try {
                 const res = await fetch('/api/cloud/change?server=' + encodeURIComponent(server));
                 const json = await res.json();
-                showToast('✅ เปลี่ยน Cloud สำเร็จ: ' + server);
+                showToast('เปลี่ยน Cloud สำเร็จ: ' + server);
                 fetchCloudStatus();
             } catch (e) {
-                showToast('❌ เปลี่ยน Cloud ไม่สำเร็จ');
+                showToast('เปลี่ยน Cloud ไม่สำเร็จ');
             }
         }
 
         async function reconnectCloud() {
-            showToast('⚡ ส่งคำสั่ง NCD ตัดและต่อใหม่...');
+            showToast('ส่งคำสั่ง NCD เชื่อมต่อใหม่...');
             try {
                 const res = await fetch('/api/cloud/reconnect');
                 const json = await res.json();
-                showToast('✅ คำสั่ง NCD สำเร็จ');
+                showToast('คำสั่ง NCD สำเร็จ');
             } catch (e) {
-                showToast('❌ ส่ง NCD ไม่สำเร็จ');
+                showToast('ส่ง NCD ไม่สำเร็จ');
             }
         }
 
         async function viewSystemLog() {
-            showToast('⏳ ดึง System Dump Log จาก Ambi...');
+            showToast('กำลังดึง System Dump Log...');
             const box = document.getElementById('syslogModal');
             box.style.display = 'block';
-            box.innerText = 'กำลังส่ง NSL ไปยัง Ambi:8070... กรุณารอสักครู่';
+            box.innerText = 'กำลังส่ง NSL ไปยัง Ambi:8070...';
             try {
                 const res = await fetch('/api/system_log');
                 const text = await res.text();
                 box.innerText = text || 'ไม่มี Log ตอบกลับ';
-                showToast('✅ ดึง Log สำเร็จ');
+                showToast('ดึง Log สำเร็จ');
             } catch (e) {
                 box.innerText = 'เกิดข้อผิดพลาด: ' + e;
-                showToast('❌ ดึง Log ล้มเหลว');
+                showToast('ดึง Log ล้มเหลว');
             }
         }
 
         async function detectNetworkNow() {
-            showToast('🌐 กำลังตรวจจับ IP เครือข่ายอัตโนมัติ...');
+            showToast('กำลังตรวจสอบการเชื่อมต่อเครือข่าย...');
             try {
                 const res = await fetch('/api/network/detect', { method: 'POST' });
                 const json = await res.json();
@@ -1627,18 +1761,16 @@
                     document.getElementById('netWanIp').innerText = json.network.wan_ip;
                     document.getElementById('netDnsIp').innerText = json.network.dns_redirect_ip;
                     document.getElementById('netAmbiIp').innerText = json.network.ambi_ip || 'Waiting for query...';
-                    showToast(`✅ Host: ${json.network.host_ip} | WAN: ${json.network.wan_ip}`);
+                    showToast(`Host: ${json.network.host_ip} | WAN: ${json.network.wan_ip}`);
                 } else {
-                    showToast('❌ ไม่สามารถดึงข้อมูลเครือข่ายได้');
+                    showToast('ไม่สามารถดึงข้อมูลเครือข่ายได้');
                 }
             } catch (e) {
-                showToast('❌ เชื่อมต่อล้มเหลว');
+                showToast('เชื่อมต่อล้มเหลว');
             }
         }
 
-        // -------------------------------------------------------------
-        // SVG SMOOTH PATH BUILDER (Catmull-Rom / Bezier)
-        // -------------------------------------------------------------
+        // SVG Catmull-Rom Smooth Path
         function buildSmoothSvgPath(points) {
             if (!points || points.length === 0) return '';
             if (points.length === 1) return `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
@@ -1658,13 +1790,11 @@
             return d;
         }
 
-        // -------------------------------------------------------------
-        // HOME SCREEN 4-HOUR CLIMATE CURVE
-        // -------------------------------------------------------------
+        // Home Screen 4-Hour Climate Curve
         let lastHomeCurveFetch = 0;
         async function updateHomeCurve() {
             const now = Date.now();
-            if (now - lastHomeCurveFetch < 10000) return; // Throttle to every 10s
+            if (now - lastHomeCurveFetch < 10000) return;
             lastHomeCurveFetch = now;
 
             try {
@@ -1686,7 +1816,7 @@
                 if (maxH - minH < 10) { minH -= 5; maxH += 5; }
 
                 const width = 400;
-                const height = 90;
+                const height = 84;
                 const padX = 8;
                 const padY = 8;
                 const drawW = width - (padX * 2);
@@ -1733,9 +1863,7 @@
             }
         }
 
-        // -------------------------------------------------------------
-        // ANALYTICS DRAWER - TABS, METRICS & ACTIVITY TIMELINE
-        // -------------------------------------------------------------
+        // Analytics Drawer
         let currentAnalyticsTab = 'history';
         let currentAnalyticsRange = '4h';
 
@@ -1771,7 +1899,6 @@
                 const stats = json.data.stats;
                 const pts = json.data.points || [];
 
-                // Update Stat Cards
                 document.getElementById('statTempCurrent').innerText = (stats.latest_temp !== null ? stats.latest_temp : '--') + '°C';
                 document.getElementById('statTempMinMax').innerText = `L ${stats.min_temp !== null ? stats.min_temp : '--'}° | H ${stats.max_temp !== null ? stats.max_temp : '--'}° (เฉลี่ย ${stats.avg_temp || '--'}°)`;
 
@@ -1792,7 +1919,7 @@
             if (!svg) return;
             const pts = data.points;
             if (!pts || pts.length === 0) {
-                svg.innerHTML = '<text x="220" y="85" text-anchor="middle" fill="#64748b" font-size="12">ยังไม่มีข้อมูลสภาพอากาศสำหรับช่วงเวลานี้</text>';
+                svg.innerHTML = '<text x="220" y="85" text-anchor="middle" fill="var(--text-muted)" font-size="11">ยังไม่มีข้อมูลสภาพอากาศสำหรับช่วงเวลานี้</text>';
                 return;
             }
 
@@ -1800,8 +1927,8 @@
             const height = 170;
             const padL = 36;
             const padR = 36;
-            const padT = 18;
-            const padB = 26;
+            const padT = 16;
+            const padB = 24;
             const drawW = width - padL - padR;
             const drawH = height - padT - padB;
 
@@ -1839,15 +1966,15 @@
             let html = `
                 <defs>
                     <linearGradient id="anHumGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#0284c7" stop-opacity="0.32"/>
-                        <stop offset="100%" stop-color="#0284c7" stop-opacity="0.0"/>
+                        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.16"/>
+                        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
                     </linearGradient>
                 </defs>
 
                 <!-- Grid lines -->
-                <line x1="${padL}" y1="${gridYTop}" x2="${padL + drawW}" y2="${gridYTop}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3"/>
-                <line x1="${padL}" y1="${gridYMid}" x2="${padL + drawW}" y2="${gridYMid}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3"/>
-                <line x1="${padL}" y1="${gridYBot}" x2="${padL + drawW}" y2="${gridYBot}" stroke="rgba(255,255,255,0.1)"/>
+                <line x1="${padL}" y1="${gridYTop}" x2="${padL + drawW}" y2="${gridYTop}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2,2"/>
+                <line x1="${padL}" y1="${gridYMid}" x2="${padL + drawW}" y2="${gridYMid}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2,2"/>
+                <line x1="${padL}" y1="${gridYBot}" x2="${padL + drawW}" y2="${gridYBot}" stroke="rgba(255,255,255,0.08)"/>
 
                 <!-- Left Axis (Temp Coral) -->
                 <text x="${padL - 6}" y="${gridYTop + 4}" font-size="9" fill="#f87171" text-anchor="end">${maxT}°</text>
@@ -1861,31 +1988,30 @@
 
                 <!-- Humidity Area & Line -->
                 <path d="${humAreaD}" fill="url(#anHumGrad)"/>
-                <path d="${humPathD}" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="${humPathD}" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/>
 
                 <!-- Temperature Line -->
-                <path d="${tempPathD}" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="${tempPathD}" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round"/>
 
                 <!-- End dots -->
-                <circle cx="${tempCoords[tempCoords.length - 1].x.toFixed(1)}" cy="${tempCoords[tempCoords.length - 1].y.toFixed(1)}" r="4" fill="#f87171"/>
-                <circle cx="${humCoords[humCoords.length - 1].x.toFixed(1)}" cy="${humCoords[humCoords.length - 1].y.toFixed(1)}" r="3.5" fill="#38bdf8"/>
+                <circle cx="${tempCoords[tempCoords.length - 1].x.toFixed(1)}" cy="${tempCoords[tempCoords.length - 1].y.toFixed(1)}" r="3" fill="#f87171"/>
+                <circle cx="${humCoords[humCoords.length - 1].x.toFixed(1)}" cy="${humCoords[humCoords.length - 1].y.toFixed(1)}" r="3" fill="#38bdf8"/>
 
                 <!-- Interactive cursor elements -->
-                <line id="interactiveCursorLine" x1="0" y1="${padT}" x2="0" y2="${padT + drawH}" stroke="rgba(255,255,255,0.4)" stroke-dasharray="2,2" style="display:none;"/>
-                <circle id="interactiveCursorDotT" cx="0" cy="0" r="4.5" fill="#f87171" stroke="#fff" stroke-width="1.5" style="display:none;"/>
-                <circle id="interactiveCursorDotH" cx="0" cy="0" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1.5" style="display:none;"/>
+                <line id="interactiveCursorLine" x1="0" y1="${padT}" x2="0" y2="${padT + drawH}" stroke="rgba(255,255,255,0.3)" stroke-dasharray="2,2" style="display:none;"/>
+                <circle id="interactiveCursorDotT" cx="0" cy="0" r="3.5" fill="#f87171" stroke="#fff" stroke-width="1" style="display:none;"/>
+                <circle id="interactiveCursorDotH" cx="0" cy="0" r="3.5" fill="#38bdf8" stroke="#fff" stroke-width="1" style="display:none;"/>
 
                 <!-- Touch / Mouse overlay rect -->
                 <rect id="chartInteractiveRect" x="${padL}" y="${padT}" width="${drawW}" height="${drawH}" fill="transparent" style="cursor: crosshair;"/>
             `;
 
-            // Time labels at bottom
             const labelCount = Math.min(5, pts.length);
             for (let k = 0; k < labelCount; k++) {
                 const idx = Math.floor(k * (pts.length - 1) / (labelCount - 1 || 1));
                 const pt = pts[idx];
                 const lx = padL + (idx / (pts.length - 1 || 1)) * drawW;
-                html += `<text x="${lx.toFixed(1)}" y="${height - 6}" font-size="9" fill="#94a3b8" text-anchor="${k === 0 ? 'start' : (k === labelCount - 1 ? 'end' : 'middle')}">${pt.time_str}</text>`;
+                html += `<text x="${lx.toFixed(1)}" y="${height - 6}" font-size="9" fill="var(--text-muted)" text-anchor="${k === 0 ? 'start' : (k === labelCount - 1 ? 'end' : 'middle')}">${pt.time_str}</text>`;
             }
 
             svg.innerHTML = html;
@@ -1934,10 +2060,10 @@
 
                 tooltip.style.display = 'block';
                 tooltip.innerHTML = `
-                    <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">⏰ ${pt.datetime_str ? pt.datetime_str.split(' ')[1] : pt.time_str}</div>
-                    <div>🌡️ อุณหภูมิ: <b style="color: #f87171;">${pt.temperature}°C</b></div>
-                    <div>💧 ความชื้น: <b style="color: #38bdf8;">${pt.humidity}%</b></div>
-                    <div>🍃 Humidex: <b style="color: #10b981;">${pt.humidex}°C</b> (${pt.comfort_label})</div>
+                    <div style="font-weight: 500; color: var(--text-primary); margin-bottom: 2px;">${pt.datetime_str ? pt.datetime_str.split(' ')[1] : pt.time_str}</div>
+                    <div>อุณหภูมิ: <span style="color: #f87171; font-weight: 500;">${pt.temperature}°C</span></div>
+                    <div>ความชื้น: <span style="color: #38bdf8; font-weight: 500;">${pt.humidity}%</span></div>
+                    <div>Humidex: <span style="color: #4cc38a; font-weight: 500;">${pt.humidex}°C</span> (${pt.comfort_label})</div>
                 `;
             }
 
@@ -1962,7 +2088,7 @@
                 const json = await res.json();
                 const events = json.events || [];
                 if (events.length === 0) {
-                    listElem.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim); font-size: 12px;">ยังไม่มีข้อมูลประวัติคำสั่ง</div>';
+                    listElem.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 11px;">ยังไม่มีข้อมูลประวัติคำสั่ง</div>';
                     return;
                 }
 
@@ -1977,31 +2103,31 @@
                 for (const [dateGroup, groupEvents] of Object.entries(groups)) {
                     html += `
                         <div class="timeline-group">
-                            <div class="timeline-group-header">📅 ${dateGroup}</div>
+                            <div class="timeline-group-header">${dateGroup}</div>
                             ${groupEvents.map(ev => `
                                 <div class="timeline-item-card">
                                     <div class="timeline-connector"></div>
-                                    <div class="timeline-icon-box" style="border-color: ${ev.color}; box-shadow: 0 0 10px ${ev.color}33;">
-                                        ${ev.icon}
+                                    <div class="timeline-icon-box" style="border-color: ${ev.color};">
+                                        <span style="font-size: 10px; color: ${ev.color};">&bull;</span>
                                     </div>
                                     <div class="timeline-card-body">
                                         <div class="timeline-card-top">
-                                            <span class="timeline-badge-pill" style="color: ${ev.color}; background: ${ev.color}22; border: 1px solid ${ev.color}44;">
+                                            <span class="timeline-badge-pill" style="color: ${ev.color}; background-color: ${ev.color}18; border: 1px solid ${ev.color}33;">
                                                 ${ev.badge}
                                             </span>
-                                            <span style="font-size: 10px; color: var(--text-dim);">${ev.time_str} (${ev.relative_time})</span>
+                                            <span style="font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums;">${ev.time_str} (${ev.relative_time})</span>
                                         </div>
                                         <div class="timeline-card-title">${ev.title}</div>
-                                        ${ev.trigger_reason ? `<div class="timeline-card-reason">💡 ${ev.trigger_reason}</div>` : ''}
+                                        ${ev.trigger_reason ? `<div class="timeline-card-reason">${ev.trigger_reason}</div>` : ''}
                                         ${(ev.room_temp || ev.room_humidity) ? `
                                             <div class="timeline-card-metrics">
-                                                🌡️ ห้อง: <b style="color: #fff;">${ev.room_temp || '--'}°C</b> • 
-                                                💧 ความชื้น: <b style="color: #fff;">${ev.room_humidity || '--'}%</b>
-                                                ${ev.humidex ? ` • Humidex: <b style="color: #10b981;">${ev.humidex}°C</b>` : ''}
+                                                ห้อง: <span style="color: var(--text-primary);">${ev.room_temp || '--'}°C</span> &bull; 
+                                                ความชื้น: <span style="color: var(--text-primary);">${ev.room_humidity || '--'}%</span>
+                                                ${ev.humidex ? ` &bull; Humidex: <span style="color: var(--status-green);">${ev.humidex}°C</span>` : ''}
                                             </div>
                                         ` : ''}
                                         ${ev.result ? `
-                                            <div style="font-size: 9px; color: ${ev.result.includes('completeir') || ev.result.includes('OK') || ev.result.includes('Synced') ? '#34d399' : '#94a3b8'}; margin-top: 2px;">
+                                            <div style="font-size: 10px; color: ${ev.result.includes('completeir') || ev.result.includes('OK') || ev.result.includes('Synced') ? 'var(--status-green)' : 'var(--text-muted)'}; margin-top: 2px;">
                                                 สถานะ: ${ev.result}
                                             </div>
                                         ` : ''}
@@ -2019,19 +2145,19 @@
         }
 
         async function syncRemotePower(power) {
-            showToast(`🔄 กำลังซิงค์สถานะรีโมทเป็น: แอร์${power === 'On' ? 'เปิด' : 'ปิด'}...`);
+            showToast(`กำลังซิงค์สถานะรีโมทเป็น: แอร์${power === 'On' ? 'เปิด' : 'ปิด'}...`);
             try {
                 const res = await fetch('/api/sync/state?power=' + encodeURIComponent(power));
                 const json = await res.json();
                 if (json.status === 'OK') {
-                    showToast(`✅ ซิงค์สำเร็จ: บันทึกสถานะแอร์เป็น ${json.synced_power} แล้ว`);
+                    showToast(`ซิงค์สำเร็จ: สถานะแอร์ ${json.synced_power}`);
                     updateDashboard();
                     if (currentAnalyticsTab === 'timeline') fetchAnalyticsTimeline();
                 } else {
-                    showToast('❌ ซิงค์ไม่สำเร็จ');
+                    showToast('ซิงค์ไม่สำเร็จ');
                 }
             } catch (e) {
-                showToast('❌ เชื่อมต่อล้มเหลว');
+                showToast('เชื่อมต่อล้มเหลว');
             }
         }
 
@@ -2043,4 +2169,3 @@
     </script>
 </body>
 </html>
-
