@@ -899,6 +899,36 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
      * ปรับ Fallback IP และ Candidate ลำดับแรกเป็น `192.168.1.191` (IP ล่าสุดที่ Router จ่ายให้ Ambi)
      * ปรับ Timeout ของ `is_valid_ambi` เป็น 0.8 วินาที เพื่อความเสถียรบนเครือข่าย Wi-Fi
 
+---
+
+## 45. ปรับปรุง UI Flow ให้ตรงตามคู่มือต้นฉบับ Ambi Climate User Guide (v1.9) 100%
+
+1. **การวิเคราะห์จากคู่มือต้นฉบับ (`ambi - manual.pdf`):**
+   * **หน้า 9–10 (Main Interface):**
+     * ปุ่มลูกศร `←` มุมบนซ้ายมีไว้สำหรับเปิด **Devices Overview & All Rooms**
+     * ป้าย Comfort Estimate Pill ด้านบน แตะเพื่อส่ง Feedback สอน AI ได้ในทุกโหมด
+     * วงกลม Hero กลางหน้าจอ:
+       * ในโหมด **Comfort Mode** จะแสดงระดับความสบายที่ AI ประเมิน (เช่น `comfortable`) และเมื่อผู้ใช้แตะที่วงกลมนี้ ระบบจะเปิดหน้าต่างป้อน Feedback สอน AI
+       * ในโหมด **Temperature / Manual Mode** วงกลมกลางจะแสดง **Target Temperature** พร้อมตัวปรับอุณหภูมิ (Stepper) ได้ตรงหน้าแรก
+       * ในโหมด **OFF** หน้าปัดแสดงสีเทาสลัว แตะเพื่อเปิดแอร์
+     * แถวปุ่ม Feedback 5 ระดับไม่ได้ถูกวางค้างไว้บนหน้าหลักให้รกสายตา แต่จะแสดงขึ้นมาเป็น Bottom Sheet/Modal เมื่อแตะ Comfort Pill หรือ Center Dial
+   * **หน้า 11–12 (Devices Overview):**
+     * แสดงภาพรวมอุปกรณ์ทุกตัวในบ้าน (Living Room) สภาพอากาศจริง โหมด และสถานะการเชื่อมต่อ
+
+2. **การปรับปรุงแก้ไขใน `web_dashboard.html`:**
+   * **Top Left Navigation:** เปลี่ยนปุ่ม `←` ให้เปิด **Devices & Rooms Overview Drawer** (`drawerDevices`) สรุปสถานะฮาร์ดแวร์ Ambi Climate 2, IP, และอุณหภูมิห้อง
+   * **Comfort Estimate Pill:** เมื่อคลิกที่ Pill ด้านบน จะเปิด **Comfort Feedback Drawer** (`drawerFeedback`) ให้สอน AI ทันที
+   * **Center Hero Dial:**
+     * ในโหมด Comfort: แตะที่วงกลมกลางเพื่อเปิด **Comfort Feedback Drawer**
+     * ในโหมด Temperature / Manual: แสดงตัวเลข Target Temperature พร้อมปุ่ม Stepper `−` / `+` ปรับอุณหภูมิบนหน้าปัดได้โดยตรง แตะด้านนอกปุ่มเพื่อเปิด AC Settings
+     * ในโหมด Off: แตะเพื่อเปิดแอร์ Daikin สู่โหมด Cool 24°C ทันที
+   * **Comfort Feedback Sheet (`drawerFeedback`):**
+     * นำแผงปุ่ม 5 ระดับเดิมออกจากหน้าหลัก แทนที่ด้วยแถบ Action Bar เรียบหรู
+     * ป้อน Feedback ได้ทั้งจาก Pill, Center Dial, หรือ Action Bar โดยมี 5 ปุ่ม (`-2`, `-1`, `0`, `+1`, `+2`) ที่เมื่อแตะแล้วจะบันทึกพร้อม Toast และปิด Sheet ให้อัตโนมัติอย่างนุ่มนวล
+   * **Modes Drawer (`drawerModes`):**
+     * ปรับเป็นการ์ดแบบ `.mode-card` พร้อมแสงไฮไลท์สีเขียวมรกตแสดงโหมดที่กำลังทำงานอยู่แบบเรียลไทม์
+
+
 
 
 

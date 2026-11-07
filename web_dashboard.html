@@ -286,6 +286,78 @@
             text-align: center;
         }
 
+        .dial-stepper-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-dial-step {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--surface-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        .btn-dial-step:active {
+            background-color: var(--surface-card-hover);
+            transform: scale(0.92);
+        }
+
+        .quick-feedback-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: calc(100% - 40px);
+            margin: 0 20px 20px;
+            padding: 10px 14px;
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .quick-feedback-bar:hover {
+            border-color: var(--border-focus);
+            background-color: var(--surface-card-hover);
+            color: var(--text-primary);
+        }
+        .quick-feedback-bar:active {
+            transform: scale(0.99);
+        }
+
+        .mode-card {
+            border: 1px solid var(--border-subtle);
+            background-color: var(--surface-card);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mode-card:hover {
+            border-color: var(--border-focus);
+            background-color: var(--surface-card-hover);
+        }
+        .mode-card.active {
+            border-color: var(--accent-emerald);
+            background-color: rgba(0, 184, 169, 0.08);
+            box-shadow: inset 0 0 0 1px var(--accent-emerald);
+        }
+
         /* Feedback Section */
         .feedback-section {
             width: 100%;
@@ -869,7 +941,7 @@
         <div class="top-nav">
             <div class="nav-header">
                 <div class="nav-left">
-                    <button class="btn-icon" onclick="openDrawer('drawerAnalytics')" title="Analytics" aria-label="Analytics">
+                    <button class="btn-icon" onclick="openDrawer('drawerDevices')" title="Devices & Rooms Overview" aria-label="Devices Overview">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
@@ -908,7 +980,7 @@
                     </svg>
                     <span id="roomHum">--</span><span>%</span>
                 </div>
-                <div id="comfortPill" class="comfort-pill" onclick="openDrawer('drawerModes')">
+                <div id="comfortPill" class="comfort-pill" onclick="handleComfortClick()" title="แตะเพื่อสอน AI (Comfort Feedback)">
                     comfortable
                 </div>
             </div>
@@ -950,40 +1022,27 @@
 
         <!-- Center Hero Dial -->
         <div class="dial-section">
-            <div class="dial-bubble" id="dialBubble" onclick="openDrawer('drawerAC')">
+            <div class="dial-bubble" id="dialBubble" onclick="handleDialClick()">
                 <div class="dial-mode-badge" id="dialModeBadge">Comfort Mode &bull; AC On</div>
                 <div class="dial-label" id="dialLabel">comfortable</div>
-                <div class="dial-sub" id="dialSub">Feels 25.0°C &bull; AC 24°C</div>
-                <div class="dial-hint" id="dialHint">แตะเพื่อปรับแอร์ Daikin</div>
+                <div class="dial-sub" id="dialSub">Feels 25.0°C &bull; Target 26.0°C</div>
+                <div class="dial-hint" id="dialHint">แตะเพื่อให้ Feedback สอน AI</div>
             </div>
         </div>
 
-        <!-- Comfort Feedback Row -->
-        <div class="feedback-section">
-            <div class="feedback-title">ระดับความสบาย (Comfort Feedback)</div>
-            <div class="feedback-grid">
-                <button class="btn-chip" onclick="sendFeedback('freezing')">
-                    <span class="chip-step">-2</span>
-                    <span>หนาวมาก</span>
-                </button>
-                <button class="btn-chip" onclick="sendFeedback('cold')">
-                    <span class="chip-step">-1</span>
-                    <span>หนาวไป</span>
-                </button>
-                <button class="btn-chip chip-center" onclick="sendFeedback('comfy')">
-                    <span class="chip-step">0</span>
-                    <span>สบายดี</span>
-                </button>
-                <button class="btn-chip" onclick="sendFeedback('warm')">
-                    <span class="chip-step">+1</span>
-                    <span>ร้อนไป</span>
-                </button>
-                <button class="btn-chip" onclick="sendFeedback('hot')">
-                    <span class="chip-step">+2</span>
-                    <span>ร้อนมาก</span>
-                </button>
+        <!-- Quick Feedback Action Bar (Matches Ambi Manual) -->
+        <button class="quick-feedback-bar" onclick="openDrawer('drawerFeedback')" aria-label="Teach AI Comfort Feedback">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-emerald);">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                    <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                    <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                </svg>
+                <span>ระดับความสบาย (Comfort Feedback)</span>
             </div>
-        </div>
+            <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 500;">สอน AI &rarr;</span>
+        </button>
 
         <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
@@ -1151,45 +1210,171 @@
 
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <!-- Comfort Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Comfort')">
-                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Comfort Mode (AI Auto-Tune)</div>
+                    <div class="mode-card" id="modeCard-Comfort" onclick="switchAmbiMode('Comfort')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Comfort Mode</div>
+                            <span class="comfort-pill" style="font-size: 10px; background: rgba(0, 184, 169, 0.15); color: #00b8a9;">AI Auto-Tune</span>
+                        </div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                             ระบบ AI ปรับจูนอุณหภูมิและความชื้นสัมพันธ์ (Humidex) ตาม Feedback อัตโนมัติ
                         </div>
                     </div>
 
                     <!-- Temperature Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Temperature')">
-                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Temperature Mode</div>
+                    <div class="mode-card" id="modeCard-Temperature" onclick="switchAmbiMode('Temperature')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Temperature Mode</div>
+                            <span class="comfort-pill" style="font-size: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8;">Target Set</span>
+                        </div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                             ตั้งเป้าหมายอุณหภูมิที่แน่นอน Ambi Climate จะรักษาระดับอุณหภูมิตามที่กำหนด
                         </div>
                     </div>
 
                     <!-- Manual Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Manual')">
-                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Manual Mode</div>
+                    <div class="mode-card" id="modeCard-Manual" onclick="switchAmbiMode('Manual')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Manual Mode</div>
+                            <span class="comfort-pill" style="font-size: 10px;">Direct IR</span>
+                        </div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                             ควบคุมแอร์ Daikin โดยตรงเสมือนกดรีโมทคอนโทรลโดยไม่เปิดระบบ AI
                         </div>
                     </div>
 
                     <!-- Away Mode -->
-                    <div class="btn-opt" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Away')">
-                        <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Away Mode</div>
+                    <div class="mode-card" id="modeCard-Away" onclick="switchAmbiMode('Away')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 500; color: var(--text-primary); font-size: 13px;">Away Mode</div>
+                            <span class="comfort-pill" style="font-size: 10px; background: rgba(245, 158, 11, 0.15); color: #f59e0b;">Energy Guard</span>
+                        </div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                             เฝ้าระวังสภาพอากาศเพื่อประหยัดพลังงานในขณะที่ไม่อยู่บ้าน
                         </div>
                     </div>
 
                     <!-- OFF Mode -->
-                    <div class="btn-opt btn-danger" style="text-align: left; padding: 12px 14px;" onclick="switchAmbiMode('Off')">
-                        <div style="font-weight: 500; font-size: 13px;">Off Mode</div>
+                    <div class="mode-card" id="modeCard-Off" style="border-color: rgba(248, 113, 113, 0.3);" onclick="switchAmbiMode('Off')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 500; color: #f87171; font-size: 13px;">Off Mode</div>
+                            <span class="comfort-pill" style="font-size: 10px; background: rgba(248, 113, 113, 0.15); color: #f87171;">Turn Off</span>
+                        </div>
                         <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
                             ปิดการทำงานของแอร์ Daikin ทั้งหมด
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER: COMFORT FEEDBACK SHEET (TEACH AI)            -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerFeedback" onclick="handleOverlayClick(event, 'drawerFeedback')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-emerald);">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                        <div class="drawer-title">ระดับความสบาย (Comfort Feedback)</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerFeedback')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 14px;">
+                    บอกให้ Ambi Climate ทราบว่าคุณรู้สึกอย่างไรในห้องนี้ เพื่อให้ AI ปรับจูนความเย็นและความชื้นให้เหมาะกับคุณโดยอัตโนมัติ
+                </div>
+                <div class="feedback-grid">
+                    <button class="btn-chip" onclick="submitFeedbackAndClose('freezing')">
+                        <span class="chip-step">-2</span>
+                        <span>หนาวมาก</span>
+                    </button>
+                    <button class="btn-chip" onclick="submitFeedbackAndClose('cold')">
+                        <span class="chip-step">-1</span>
+                        <span>หนาวไป</span>
+                    </button>
+                    <button class="btn-chip chip-center" onclick="submitFeedbackAndClose('comfy')">
+                        <span class="chip-step">0</span>
+                        <span>สบายดี</span>
+                    </button>
+                    <button class="btn-chip" onclick="submitFeedbackAndClose('warm')">
+                        <span class="chip-step">+1</span>
+                        <span>ร้อนไป</span>
+                    </button>
+                    <button class="btn-chip" onclick="submitFeedbackAndClose('hot')">
+                        <span class="chip-step">+2</span>
+                        <span>ร้อนมาก</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- DRAWER: DEVICES & ROOMS OVERVIEW (MANUAL PAGE 12)    -->
+        <!-- ---------------------------------------------------- -->
+        <div class="drawer-overlay" id="drawerDevices" onclick="handleOverlayClick(event, 'drawerDevices')">
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-title-row">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                            <rect x="9" y="9" width="6" height="6"></rect>
+                        </svg>
+                        <div class="drawer-title">Devices &amp; Rooms Overview</div>
+                    </div>
+                    <button class="btn-icon" onclick="closeDrawer('drawerDevices')" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                    ภาพรวมห้องและอุปกรณ์ Ambi Climate ประจำบ้าน
+                </div>
+
+                <!-- Living Room Card -->
+                <div style="background-color: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <span>Living Room</span>
+                                <span class="live-dot" style="display: inline-block;"></span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Home &bull; Ambi Climate 2 (AC02)</div>
+                        </div>
+                        <span id="devOverviewStatusBadge" class="comfort-pill" style="font-size: 11px;">Active</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border-hairline);">
+                        <div style="display: flex; gap: 14px; font-variant-numeric: tabular-nums;">
+                            <div><span style="color: var(--text-muted); font-size: 11px;">Temp:</span> <span id="devOverviewTemp" style="font-weight: 500;">--</span>°C</div>
+                            <div><span style="color: var(--text-muted); font-size: 11px;">Humidity:</span> <span id="devOverviewHum" style="font-weight: 500;">--</span>%</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn-opt" style="padding: 4px 8px; font-size: 11px;" onclick="closeDrawer('drawerDevices'); openDrawer('drawerModes');">สลับโหมด</button>
+                            <button class="btn-opt" style="padding: 4px 8px; font-size: 11px;" onclick="closeDrawer('drawerDevices'); openDrawer('drawerAC');">ตั้งค่าแอร์</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hardware & Network Summary -->
+                <div style="background-color: var(--surface-bg); border: 1px solid var(--border-hairline); border-radius: var(--radius-sm); padding: 12px; font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                    <div>Target Ambi Climate IP: <span id="devAmbiIpText" style="color: var(--text-primary); font-family: monospace;">192.168.1.191</span></div>
+                    <div>Local Hub Server: <span id="devHubIpText" style="color: var(--text-primary); font-family: monospace;">192.168.1.199:9090</span></div>
+                    <div>IR Engine Target: <span style="color: var(--text-primary); font-family: monospace;">TCP 4998 (Daikin ARC480A46)</span></div>
+                    <div>Cloud Mock Port: <span style="color: var(--text-primary); font-family: monospace;">TCP 8867 (TLS 1.2)</span></div>
+                </div>
+            </div>
+        </div>
             </div>
         </div>
 
@@ -1464,24 +1649,59 @@
                 const dialLabel = document.getElementById('dialLabel');
                 const dialSub = document.getElementById('dialSub');
                 const dialBadge = document.getElementById('dialModeBadge');
+                const dialHint = document.getElementById('dialHint');
                 const isACOn = (data.ac_state.power && data.ac_state.power.toLowerCase() === 'on');
                 const ambiMode = data.ac_state.ambi_mode || 'Comfort';
 
                 dialBadge.innerHTML = ambiMode + ' Mode &bull; ' + (isACOn ? 'AC On' : 'AC Off');
                 document.getElementById('acDrawerModeText').innerText = ambiMode + ' Mode';
 
+                // Highlight active mode card in drawerModes
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
                 if (!isACOn) {
-                    dialLabel.innerText = 'Off';
+                    document.getElementById('modeCard-Off')?.classList.add('active');
+                } else if (ambiMode) {
+                    document.getElementById('modeCard-' + ambiMode)?.classList.add('active');
+                }
+
+                // Update Devices Overview drawer values
+                const elDevTemp = document.getElementById('devOverviewTemp');
+                if (elDevTemp) elDevTemp.innerText = (rt !== null && rt !== undefined) ? rt : '--';
+                const elDevHum = document.getElementById('devOverviewHum');
+                if (elDevHum) elDevHum.innerText = (rh !== null && rh !== undefined) ? rh : '--';
+                const elDevBadge = document.getElementById('devOverviewStatusBadge');
+                if (elDevBadge) {
+                    elDevBadge.innerText = isACOn ? (ambiMode + ' Mode') : 'Off';
+                    elDevBadge.style.color = isACOn ? 'var(--accent-emerald)' : 'var(--text-muted)';
+                }
+
+                // Update Hero Dial (Matches Ambi Manual page 9/10)
+                if (!isACOn) {
+                    dialLabel.innerHTML = '<span style="color: var(--text-muted);">Off</span>';
                     dialSub.innerText = 'แอร์ปิดอยู่ • แตะเพื่อเปิดแอร์';
+                    if (dialHint) dialHint.innerText = 'แตะเพื่อเปิดแอร์ Cool 24°C';
                     dial.style.borderColor = 'var(--border-subtle)';
                 } else if (ambiMode === 'Comfort') {
                     dialLabel.innerText = data.comfort.label || 'comfortable';
                     dialSub.innerText = `Feels ${data.comfort.humidex || '--'}°C • Target ${data.comfort.target_humidex || 26}°C`;
+                    if (dialHint) dialHint.innerText = 'แตะเพื่อให้ Feedback สอน AI';
                     dial.style.borderColor = 'rgba(0, 184, 169, 0.4)';
-                } else {
-                    dialLabel.innerText = data.ac_state.temperature + '°C';
+                } else if (ambiMode === 'Temperature' || ambiMode === 'Manual') {
+                    dialLabel.innerHTML = `
+                        <div class="dial-stepper-wrap" onclick="event.stopPropagation()">
+                            <button class="btn-dial-step" onclick="adjustTemp(-1)">−</button>
+                            <span style="font-variant-numeric: tabular-nums;">${data.ac_state.temperature}</span><span style="font-size: 18px; margin-left: 2px;">°C</span>
+                            <button class="btn-dial-step" onclick="adjustTemp(+1)">+</button>
+                        </div>
+                    `;
                     dialSub.innerText = `Mode: ${data.ac_state.mode} • Fan: ${data.ac_state.fan}`;
+                    if (dialHint) dialHint.innerText = 'แตะเพื่อเปิด AC Settings';
                     dial.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+                } else if (ambiMode === 'Away') {
+                    dialLabel.innerText = 'Away Guard';
+                    dialSub.innerText = 'เฝ้าระวังสภาพอากาศประหยัดพลังงาน';
+                    if (dialHint) dialHint.innerText = 'แตะเพื่อสลับโหมด';
+                    dial.style.borderColor = 'rgba(245, 158, 11, 0.4)';
                 }
 
                 // 3. AC Drawer Controls
@@ -1554,6 +1774,37 @@
             } catch (e) {
                 console.error("Dashboard update error:", e);
             }
+        }
+
+        // Handle Center Dial Click (Matches Ambi Manual page 9/10)
+        function handleDialClick() {
+            if (!currentState) return;
+            const isACOn = (currentState.ac_state.power && currentState.ac_state.power.toLowerCase() === 'on');
+            const ambiMode = currentState.ac_state.ambi_mode || 'Comfort';
+
+            if (!isACOn) {
+                showToast('กำลังเปิดแอร์ Daikin Cool 24°C...');
+                setAC({power: 'On', temp: currentState.ac_state.temperature || 24, mode: 'Cool'});
+            } else if (ambiMode === 'Comfort') {
+                openDrawer('drawerFeedback');
+            } else if (ambiMode === 'Temperature' || ambiMode === 'Manual') {
+                openDrawer('drawerAC');
+            } else {
+                openDrawer('drawerModes');
+            }
+        }
+
+        // Handle Comfort Estimate Click (Matches Ambi Manual page 9/10)
+        function handleComfortClick() {
+            openDrawer('drawerFeedback');
+        }
+
+        // Submit Feedback and auto-close sheet
+        async function submitFeedbackAndClose(choice) {
+            await sendFeedback(choice);
+            setTimeout(() => {
+                closeDrawer('drawerFeedback');
+            }, 350);
         }
 
         // Feedback to AI (Teaching Mode)
