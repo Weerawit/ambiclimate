@@ -20,6 +20,9 @@ from socketserver import ThreadingMixIn
 import math
 import select
 from urllib.parse import urlparse, parse_qs
+import ambi_db
+
+CURRENT_TIMEZONE = ambi_db.init_timezone()
 
 # -------------------------------------------------------------
 # AUTO-NETWORK DETECTION & DASHBOARD CONFIG (Port 9090 default)
@@ -507,6 +510,16 @@ def query_live_sensors(target_ip=None):
     AC_STATE["sensor_status"] = f"Manual Query ({ip})"
     AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
 
+    ambi_db.record_sensor(
+        temperature=AC_STATE["room_temp"],
+        humidity=AC_STATE["room_humidity"],
+        luminosity=AC_STATE.get("luminosity", 0),
+        humidex=c.get("humidex"),
+        comfort_score=c.get("score"),
+        comfort_label=c.get("label"),
+        source="query"
+    )
+
     hub_log(f"[MANUAL SENSOR QUERY] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C | Status: {c['label']}")
     return {
         "status": "OK",
@@ -601,10 +614,8 @@ AC_STATE = {
 }
 
 # -------------------------------------------------------------
-# HYBRID LOCAL COMFORT AI - PROFILE & PREFERENCES
+# HYBRID LOCAL COMFORT AI - PROFILE & PREFERENCES (SQLite-backed)
 # -------------------------------------------------------------
-COMFORT_PROFILE_FILE = os.path.join(DIR, "user_comfort_profile.json")
-
 DEFAULT_COMFORT_PROFILE = {
     "auto_tune_enabled": True,
     "target_base_humidex": 26.0,
@@ -618,23 +629,23 @@ DEFAULT_COMFORT_PROFILE = {
 }
 
 def load_comfort_profile():
-    if os.path.exists(COMFORT_PROFILE_FILE):
-        try:
-            with open(COMFORT_PROFILE_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                res = DEFAULT_COMFORT_PROFILE.copy()
-                res.update(data)
-                return res
-        except Exception as e:
-            hub_log(f"[-] Error loading comfort profile: {e}")
-    return DEFAULT_COMFORT_PROFILE.copy()
+    """Loads comfort profile from SQLite database with fallback defaults."""
+    try:
+        prof = ambi_db.load_comfort_profile()
+        res = DEFAULT_COMFORT_PROFILE.copy()
+        res.update(prof)
+        return res
+    except Exception as e:
+        hub_log(f"[-] Error loading comfort profile from DB: {e}")
+        return DEFAULT_COMFORT_PROFILE.copy()
 
 def save_comfort_profile(profile):
+    """Saves comfort profile to SQLite database."""
     try:
-        with open(COMFORT_PROFILE_FILE, "w", encoding="utf-8") as f:
-            json.dump(profile, f, indent=2, ensure_ascii=False)
+        return ambi_db.save_comfort_profile(profile)
     except Exception as e:
-        hub_log(f"[-] Error saving comfort profile: {e}")
+        hub_log(f"[-] Error saving comfort profile to DB: {e}")
+        return False
 
 COMFORT_PROFILE = load_comfort_profile()
 
@@ -779,6 +790,31 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
     COMFORT_PROFILE["history"] = history[:25]
     save_comfort_profile(COMFORT_PROFILE)
 
+    # Record action to SQLite database
+    act_type = "manual_control"
+    if any(k in reason for k in ("AI", "Auto-Tuning", "Warmed", "Cooled")):
+        act_type = "ai_tune"
+    elif "Feedback" in reason:
+        act_type = "user_feedback"
+    elif "Mode" in reason:
+        act_type = "mode_change"
+    elif power is not None or "Power" in reason:
+        act_type = "power"
+
+    ambi_db.record_action(
+        action_type=act_type,
+        power=AC_STATE['power'],
+        temperature=AC_STATE['temperature'],
+        fan=AC_STATE['fan'],
+        swing=AC_STATE.get('swing', 'Auto'),
+        mode=AC_STATE['mode'],
+        trigger_reason=reason,
+        room_temp=AC_STATE.get('room_temp'),
+        room_humidity=AC_STATE.get('room_humidity'),
+        humidex=AC_STATE.get('humidex'),
+        result=ir_resp
+    )
+
     return ir_resp
 
 CONSECUTIVE_OUT_OF_BOUNDS = 0
@@ -921,6 +957,60 @@ def poll_live_sensors(interval=20):
             AC_STATE["sensor_status"] = f"PULL LIVE ({target_ip})"
             AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
             hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
+
+            # Record to SQLite database
+            ambi_db.record_sensor(
+                temperature=AC_STATE["room_temp"],
+                humidity=AC_STATE["room_humidity"],
+                luminosity=AC_STATE.get("luminosity", 0),
+                humidex=c.get("humidex"),
+                comfort_score=c.get("score"),
+                comfort_label=c.get("label"),
+                source="poll"
+            )
+
+            # Smart Thermal Drop Detection:
+            # If AC is recorded as 'Off' and mode is 'Comfort', check if temperature dropped sharply
+            if str(AC_STATE.get("power", "Off")).lower() == "off" and AC_STATE.get("ambi_mode") == "Comfort":
+                detected, init_t, curr_t, drop = ambi_db.check_thermal_drop(window_minutes=10, min_drop_c=0.4)
+                if detected:
+                    hub_log(f"[SMART SYNC ❄️] Thermal drop detected ({init_t}°C -> {curr_t}°C, -{drop}°C)! Physical remote likely used. Auto-syncing AC power to ON.")
+                    AC_STATE["power"] = "On"
+                    ambi_db.record_action(
+                        action_type='thermal_sync',
+                        power='On',
+                        temperature=AC_STATE['temperature'],
+                        fan=AC_STATE['fan'],
+                        swing=AC_STATE.get('swing', 'Auto'),
+                        mode=AC_STATE['mode'],
+                        trigger_reason=f"Smart Sync: อุณหภูมิลดฮวบ -{drop}°C (ตรวจพบเปิดแอร์จากรีโมทจริง)",
+                        room_temp=curr_t,
+                        room_humidity=AC_STATE.get('room_humidity'),
+                        humidex=c.get('humidex'),
+                        result="Auto State Synced (AC ON)"
+                    )
+
+            # Smart Thermal Rise Detection:
+            # If AC is recorded as 'On', but temperature rose steadily >= 0.8°C and room is > 27°C,
+            # it indicates someone turned OFF the AC with the physical remote!
+            elif str(AC_STATE.get("power", "Off")).lower() == "on":
+                detected, init_t, curr_t, rise = ambi_db.check_thermal_rise(window_minutes=15, min_rise_c=0.8, min_temp_threshold=27.0)
+                if detected:
+                    hub_log(f"[SMART SYNC 🛑] Thermal rise detected ({init_t}°C -> {curr_t}°C, +{rise}°C)! Physical remote likely used. Auto-syncing AC power to OFF.")
+                    AC_STATE["power"] = "Off"
+                    ambi_db.record_action(
+                        action_type='thermal_sync',
+                        power='Off',
+                        temperature=AC_STATE['temperature'],
+                        fan=AC_STATE['fan'],
+                        swing=AC_STATE.get('swing', 'Auto'),
+                        mode=AC_STATE['mode'],
+                        trigger_reason=f"Smart Sync: อุณหภูมิห้องพุ่งสูงขึ้น +{rise}°C (ตรวจพบปิดแอร์จากรีโมทจริง)",
+                        room_temp=curr_t,
+                        room_humidity=AC_STATE.get('room_humidity'),
+                        humidex=c.get('humidex'),
+                        result="Auto State Synced (AC OFF)"
+                    )
         except Exception as e:
             AC_STATE["sensor_status"] = f"Error: {e}"
         time.sleep(interval)
@@ -1470,6 +1560,15 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                     AC_STATE["comfort_label"] = c["label"]
                     AC_STATE["comfort_badge_color"] = c["badge_color"]
                     hub_log(f"[PUSH SENSOR HTTP] 📥 Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C")
+                    ambi_db.record_sensor(
+                        temperature=AC_STATE["room_temp"],
+                        humidity=AC_STATE["room_humidity"],
+                        luminosity=AC_STATE.get("luminosity", 0),
+                        humidex=c.get("humidex"),
+                        comfort_score=c.get("score"),
+                        comfort_label=c.get("label"),
+                        source="push"
+                    )
         except Exception:
             pass
 
@@ -1769,7 +1868,76 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "level": lvl, "device_ip": get_ambi_ip()}).encode('utf-8'))
             return
 
-        # 12. Serve HTML Dashboard
+        # 12. SQLite Metrics History API (For Graphs - 4h, 24h, 7d)
+        if path == '/api/history/metrics':
+            range_str = query.get('range', ['4h'])[0].lower()
+            hours = 4
+            if range_str == '24h':
+                hours = 24
+            elif range_str == '7d':
+                hours = 168
+            elif range_str == '1h':
+                hours = 1
+            metrics = ambi_db.get_sensor_metrics(hours=hours)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "data": metrics}).encode('utf-8'))
+            return
+
+        # 13. SQLite Activity Timeline API (Deployments / Actions History)
+        if path == '/api/history/timeline':
+            try:
+                limit = int(query.get('limit', ['50'])[0])
+            except (ValueError, TypeError):
+                limit = 50
+            events = ambi_db.get_timeline(limit=limit)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "events": events}).encode('utf-8'))
+            return
+
+        # 14. Physical Remote State Sync API (Sync AC Power On/Off without blasting IR)
+        if path == '/api/sync/state':
+            target_power = query.get('power', ['On'])[0].capitalize()
+            if target_power not in ('On', 'Off'):
+                target_power = 'On'
+            prev_power = AC_STATE.get('power')
+            AC_STATE['power'] = target_power
+
+            # If synced to ON and mode is Comfort, ensure Auto-tuning is active
+            if target_power == 'On' and AC_STATE.get('ambi_mode') == 'Comfort':
+                COMFORT_PROFILE["auto_tune_enabled"] = True
+                save_comfort_profile(COMFORT_PROFILE)
+
+            reason = f"Manual Remote Sync: ซิงค์สถานะแอร์เป็น {target_power} (เปิด/ปิดด้วยรีโมทจริง)"
+            ambi_db.record_action(
+                action_type='thermal_sync',
+                power=target_power,
+                temperature=AC_STATE['temperature'],
+                fan=AC_STATE['fan'],
+                swing=AC_STATE.get('swing', 'Auto'),
+                mode=AC_STATE['mode'],
+                trigger_reason=reason,
+                room_temp=AC_STATE.get('room_temp'),
+                room_humidity=AC_STATE.get('room_humidity'),
+                humidex=AC_STATE.get('humidex'),
+                result=f"State Synced ({prev_power} -> {target_power})"
+            )
+            hub_log(f"[STATE SYNC] AC power state manually synced to: {target_power} (Prev: {prev_power})")
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "OK",
+                "synced_power": target_power,
+                "prev_power": prev_power,
+                "ac_state": AC_STATE
+            }).encode('utf-8'))
+            return
+
+        # 15. Serve HTML Dashboard
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.end_headers()
@@ -2165,6 +2333,7 @@ if __name__ == '__main__':
     hub_log(f"  Ambi Device IP (Locked)  : {AMBI_IP or 'Waiting for connect query...'}")
     hub_log(f"  Cloud Ports              : TCP 8866 (Plain) & TCP 8867 (TLS 1.2)")
     hub_log(f"  Dashboard Web            : http://localhost:{DASHBOARD_PORT} (or http://{HOST_IP}:{DASHBOARD_PORT})")
+    hub_log(f"  OS Timezone Synced       : {CURRENT_TIMEZONE} ({time.strftime('%Z %z')})")
     hub_log("=" * 68)
 
     # 1. DNS Server (Port 53 UDP) - Targets & query monitors

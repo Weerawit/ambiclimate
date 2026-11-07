@@ -720,6 +720,60 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
 2. **เพิ่ม `security_opt: [ "seccomp:unconfined" ]` ใน `docker-compose.yml`:**
    * ปิดการบล็อกซิสคอลที่ไม่รู้จักของ seccomp รุ่นเก่าบน Docker โฮสต์ ทำให้เคอร์เนลส่งคำสั่งเข้า-ออกคอนเทนเนอร์ได้อย่างสมบูรณ์แบบ
 
+---
+
+## 35. พัฒนาระบบจัดเก็บข้อมูล SQLite (`ambi_data.db`), กราฟประวัติสภาพอากาศ + ไทม์ไลน์กิจกรรม (Analytics UI), และระบบซิงค์สถานะรีโมทจริง
+
+### 1. ฐานข้อมูล SQLite (`ambi_db.py` -> `ambi_data.db`):
+* จัดเก็บข้อมูล 2 ตารางหลัก ทำงานในโหมด `WAL` เพื่อรองรับการอ่าน-เขียนแบบมัลติเธรด:
+  1. **`sensor_telemetry`**: บันทึกอุณหภูมิ, ความชื้น, แสง, Humidex, และคะแนนความสบายจากการ Poll และ Push ทุกช่วงเวลา
+  2. **`ac_actions`**: บันทึกทุกคำสั่งที่ส่งไปหาแอร์ Daikin (AI Auto-tune, รีโมทแมนนวล, การสอน AI Feedback, และการเปลี่ยนโหมด)
+* เพิ่ม REST API Endpoints:
+  * `/api/history/metrics?range=4h|24h|7d`: ส่งข้อมูล Time-series พร้อมค่า Min/Max/Avg
+  * `/api/history/timeline?limit=50`: ส่งรายการเหตุการณ์กิจกรรมจัดกลุ่มตามวัน
+  * `/api/sync/state?power=On|Off`: ซิงค์สถานะเปิด/ปิดแอร์เข้าสู่ระบบ
+
+### 2. หน้าจอ Analytics & Activity Timeline (ถอดแบบ Ambi Climate Mobile App):
+* หน้าจอ UI ลิ้นชัก Analytics แบ่ง 2 แท็บย่อย:
+  * **[📈 Climate History]**: กราฟแสดงแนวโน้มอุณหภูมิห้อง (สีคอรัลเรืองแสง), ความชื้นสัมพัทธ์ (สีฟ้าพร้อมพื้นที่เกรเดียนต์), และเส้น Humidex (สีมินต์ประ) พร้อมการ์ดสรุปสถิติ L/H/Avg และระบบ Interactive Crosshair Tooltip แตะดูค่าแบบสด
+  * **[⏱️ Activity Timeline (Deployments)]**: แสดงไทม์ไลน์แนวตั้งเชื่อมต่อด้วยเส้นต่อเนื่อง การ์ดกิจกรรมแสดงไอคอนเรืองแสงตามประเภท (AI 🤖, รีโมท 📱, ไฟฟ้า ⚡, ฟีดแบ็ก 😊), เวลาภาษาไทย, เงื่อนไขสภาพอากาศขณะส่งคำสั่ง, และผลลัพธ์
+* กราฟ 4 ชม. บนหน้าแรกถูกปรับปรุงให้ดึงข้อมูลสดจริงจาก SQLite
+
+### 3. การวิเคราะห์ฮาร์ดแวร์เรื่องการดักฟังสัญญาณ IR จากรีโมทอื่น (IR Learning / Receiver Analysis):
+* **ข้อจำกัดฮาร์ดแวร์ Ambi Climate 2:** ตัวเครื่องมีเพียง **IR Transmitter Array 3 ทิศทาง** ต่อกับ Global Caché iTach บนพอร์ต 4998 เท่านั้น **ไม่มีเซ็นเซอร์ตัวรับแสงอินฟราเรด (No IR Receiver Diode)** ติดตั้งอยู่บนบอร์ด จึงไม่สามารถรับหรือถอดรหัสสัญญาณจากรีโมทจริงได้ทางกายภาพ (เป็น One-Way Blaster ตามการออกแบบของผู้ผลิต)
+* **ทางออกเพื่อแก้ปัญหา State Desync และให้ Comfort AI ทำงานต่อได้:**
+  1. **Smart Thermal Drop & Rise Detection (ระบบอัตโนมัติไม่ต้องใช้อุปกรณ์เพิ่ม):** ฝังอัลกอริทึมใน `poll_live_sensors` ทั้งการตรวจจับอุณหภูมิลดฮวบเพื่อซิงค์เปิดแอร์ และอุณหภูมิพุ่งสูงขึ้นเพื่อซิงค์ปิดแอร์อัตโนมัติ
+  2. **ปุ่ม Quick State Sync บนหน้าจอเว็บ UI:** เพิ่มการ์ดซิงค์สถานะในลิ้นชัก AC Settings เพื่อให้ผู้ใช้แตะปุ่ม *"🟢 ซิงค์เป็น: แอร์เปิดอยู่ (ON)"* หรือ *"⚪ ซิงค์เป็น: แอร์ปิดอยู่ (OFF)"* ได้ใน 1 วินาที
+  3. **รองรับ Smart Plug วัดกำลังไฟ / External ESP32 IR Receiver:** สามารถส่งคำสั่ง HTTP GET มาที่ `/api/sync/state?power=On|Off` เพื่ออัปเดตสถานะได้แบบ 100% เรียลไทม์
+
+---
+
+## 36. ย้ายข้อมูลการตั้งค่าและการเรียนรู้ความชอบ AI (`comfort_profile`) เข้าสู่ SQLite และลบไฟล์ `user_comfort_profile.json`
+
+1. **เพิ่มตาราง `comfort_profile` ใน `ambi_data.db`:**
+   * จัดเก็บค่า: `auto_tune_enabled`, `target_base_humidex`, `user_offset`, `min_temp`, `max_temp`, `cooldown_minutes`, `last_tune_time`, `last_tune_action`, และ `updated_at`
+2. **ปรับปรุง `ambi_hub.py` และ `ambi_db.py`:**
+   * ฟังก์ชัน `load_comfort_profile()` และ `save_comfort_profile()` ดึงและบันทึกข้อมูลผ่าน SQLite โดยตรงแบบ Transaction ปลอดภัย
+3. **ทำความสะอาดคอนฟิกและลบไฟล์ JSON:**
+   * ลบไฟล์ `user_comfort_profile.json` ออกจากระบบอย่างถาวร
+   * นำ Volume mount ของไฟล์ JSON ออกจาก `docker-compose.yml` เพื่อให้เซิร์ฟเวอร์รันผ่าน SQLite `ambi_data.db` เพียงไฟล์เดียวอย่างเบาสบาย
+
+---
+
+## 37. กำหนดให้ระบบ Log และเวลาทั้งหมดดึง Timezone จาก Host OS อัตโนมัติ
+
+1. **ฟังก์ชัน `init_timezone()` ใน Python (`ambi_db.py` และ `ambi_hub.py`):**
+   * ตรวจสอบตัวแปร `TZ`, ไฟล์ `/etc/timezone`, และ symlink `/etc/localtime` ของระบบปฏิบัติการ
+   * สั่ง `time.tzset()` เพื่อบังคับให้ Runtime ของ Python ซิงค์เวลากับ Local Timezone ของเครื่องแม่ (Host OS) 100%
+2. **การปรับแต่ง Docker & Container Deployment:**
+   * เพิ่มการติดตั้งแพ็กเกจ `tzdata` ใน [`Dockerfile`](file:///mnt/c/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/Dockerfile)
+   * เพิ่ม Volume Mount `/etc/localtime:/etc/localtime:ro` และ `/etc/timezone:/etc/timezone:ro` พร้อมส่งผ่านตัวแปร `TZ=${TZ:-Asia/Bangkok}` ใน [`docker-compose.yml`](file:///mnt/c/Users/maneepon/Documents/Projects/Ambi%20Climate/ambiclimate/docker-compose.yml)
+3. **ผลลัพธ์:**
+   * ทุกบันทึกใน `hub_activity.log`, Console Log, SQLite `datetime_str`, และไทม์ไลน์หน้าเว็บจะแสดงเวลาท้องถิ่นตรงตาม OS เสมอ (เช่นเวลาประเทศไทย GMT+7) ไม่หลงไปเป็นเวลาสากล UTC อีกต่อไป
+
+
+
+
 
 
 

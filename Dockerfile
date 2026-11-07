@@ -7,6 +7,9 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8
 
+# Install tzdata for accurate OS timezone support
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+
 # Copy application files
 COPY . /app/
 

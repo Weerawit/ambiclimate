@@ -10,12 +10,15 @@ services:
     environment:
       - HOST_IP=192.168.1.199
       - WEB_PORT=9090
+      - TZ=${TZ:-Asia/Bangkok}
       # Optional overrides:
       # - ROUTER_WAN_IP=
       # - DNS_REDIRECT_IP=
     volumes:
-      - ./user_comfort_profile.json:/app/user_comfort_profile.json
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
       - ./hub_activity.log:/app/hub_activity.log
+      - ./ambi_data.db:/app/ambi_data.db
 
     # If running on Docker Desktop (Windows/macOS) where network_mode: "host" is not supported:
     # comment out network_mode: "host" and uncomment ports below:

@@ -507,6 +507,292 @@
             border: 1px solid var(--ambi-surface-border);
         }
 
+        /* Sub-nav Navigation (Analytics Drawer) */
+        .sub-nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 14px;
+            gap: 4px;
+        }
+        .sub-nav-btn {
+            flex: 1;
+            padding: 8px 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .sub-nav-btn.active {
+            background: rgba(0, 196, 180, 0.2);
+            color: var(--ambi-teal);
+            border: 1px solid rgba(0, 196, 180, 0.4);
+            box-shadow: 0 2px 8px rgba(0, 196, 180, 0.15);
+        }
+
+        /* Time Range Selector */
+        .range-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .range-chip {
+            padding: 4px 10px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--ambi-surface-border);
+            color: var(--text-dim);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .range-chip.active {
+            background: var(--ambi-teal);
+            color: #040814;
+            border-color: var(--ambi-teal);
+            font-weight: 700;
+        }
+
+        /* Stat Cards Grid */
+        .analytics-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .analytics-stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .analytics-stat-title {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .analytics-stat-val {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .analytics-stat-sub {
+            font-size: 9px;
+            color: var(--text-sub);
+        }
+
+        /* Interactive SVG Chart Box */
+        .chart-box-card {
+            background: rgba(10, 16, 29, 0.85);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            position: relative;
+            margin-bottom: 14px;
+        }
+        .chart-svg-interactive {
+            width: 100%;
+            height: 170px;
+            display: block;
+            overflow: visible;
+        }
+        .chart-legend-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            font-size: 10px;
+            color: var(--text-sub);
+            margin-top: 8px;
+        }
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chart-legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Floating Tooltip */
+        .chart-tooltip-box {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            background: rgba(18, 28, 48, 0.95);
+            border: 1px solid var(--ambi-teal);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 10px;
+            color: #fff;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            display: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+            z-index: 20;
+            line-height: 1.4;
+        }
+
+        /* Timeline View */
+        .timeline-scroll {
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .timeline-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+        .timeline-group-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-left: 26px;
+            position: relative;
+        }
+        .timeline-item-card {
+            display: flex;
+            gap: 12px;
+            position: relative;
+        }
+        .timeline-connector {
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -16px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .timeline-item-card:last-child .timeline-connector {
+            display: none;
+        }
+        .timeline-icon-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--ambi-surface-border);
+            flex-shrink: 0;
+            z-index: 2;
+        }
+        .timeline-card-body {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--ambi-surface-border);
+            border-radius: 10px;
+            padding: 9px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .timeline-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .timeline-badge-pill {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+        .timeline-card-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .timeline-card-reason {
+            font-size: 11px;
+            color: var(--text-sub);
+            line-height: 1.35;
+        }
+        .timeline-card-metrics {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Remote Sync Card */
+        .sync-card {
+            background: rgba(2, 132, 199, 0.08);
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        .sync-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .sync-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+        .btn-sync {
+            flex: 1;
+            padding: 9px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-sync-on {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .btn-sync-off {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+        }
+        .btn-sync:active { opacity: 0.8; transform: scale(0.98); }
+
         /* Toast notification */
         .toast {
             position: fixed;
@@ -720,6 +1006,25 @@
                         🔴 ปิดแอร์ (OFF)
                     </button>
                 </div>
+
+                <!-- Physical Remote Sync Box -->
+                <div class="sync-card">
+                    <div class="sync-header">
+                        <span>🔄 ซิงค์สถานะรีโมทจริง (Remote Sync)</span>
+                        <span id="remoteSyncBadge" class="sync-badge">สถานะ: แอร์ปิด (OFF)</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-sub); line-height: 1.4;">
+                        หากเปิด/ปิดแอร์ด้วยรีโมทจริง ให้กดปุ่มนี้เพื่อซิงค์สถานะเข้าสู่ระบบ Ambi โดยไม่ต้องส่งสัญญาณซ้ำ AI จะได้ทำงานต่อถูกต้อง
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <button class="btn-sync btn-sync-on" onclick="syncRemotePower('On')">
+                            🟢 ซิงค์เป็น: แอร์เปิดอยู่ (ON)
+                        </button>
+                        <button class="btn-sync btn-sync-off" onclick="syncRemotePower('Off')">
+                            ⚪ ซิงค์เป็น: แอร์ปิดอยู่ (OFF)
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -879,19 +1184,85 @@
         <!-- DRAWER 4: ANALYTICS (HISTORY & INSIGHTS Page 15)     -->
         <!-- ---------------------------------------------------- -->
         <div class="drawer-overlay" id="drawerAnalytics" onclick="handleOverlayClick(event, 'drawerAnalytics')">
-            <div class="drawer-content">
+            <div class="drawer-content" style="max-height: 88vh;">
                 <div class="drawer-header">
-                    <div class="drawer-title">📊 Climate Analytics & History</div>
+                    <div class="drawer-title">📊 Analytics & Deployments</div>
                     <button class="btn-close" onclick="closeDrawer('drawerAnalytics')">✕</button>
                 </div>
 
-                <div style="font-size: 12px; color: var(--text-sub);">
-                    ประวัติการส่งสัญญาณ IR และการปรับจูนของ Local Comfort AI
+                <!-- Sub-nav Tabs -->
+                <div class="sub-nav-tabs">
+                    <button class="sub-nav-btn active" id="tabBtnHistory" onclick="switchAnalyticsTab('history')">
+                        📈 กราฟสภาพอากาศ (History)
+                    </button>
+                    <button class="sub-nav-btn" id="tabBtnTimeline" onclick="switchAnalyticsTab('timeline')">
+                        ⏱️ ไทม์ไลน์กิจกรรม (Timeline)
+                    </button>
                 </div>
 
-                <div class="history-list" id="historyList">
-                    <div style="text-align: center; padding: 20px; color: var(--text-dim);">
-                        กำลังโหลดข้อมูลประวัติ...
+                <!-- TAB 1: CLIMATE HISTORY GRAPH VIEW -->
+                <div id="analyticsHistoryView">
+                    <!-- Range Selector -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 11px; color: var(--text-sub);">ช่วงเวลาย้อนหลัง</span>
+                        <div class="range-bar">
+                            <button class="range-chip active" id="range4h" onclick="changeAnalyticsRange('4h')">4 ชม.</button>
+                            <button class="range-chip" id="range24h" onclick="changeAnalyticsRange('24h')">24 ชม.</button>
+                            <button class="range-chip" id="range7d" onclick="changeAnalyticsRange('7d')">7 วัน</button>
+                        </div>
+                    </div>
+
+                    <!-- Stat Cards Grid -->
+                    <div class="analytics-stat-grid">
+                        <div class="analytics-stat-card">
+                            <span class="analytics-stat-title">🌡️ อุณหภูมิ</span>
+                            <span class="analytics-stat-val" id="statTempCurrent">--°C</span>
+                            <span class="analytics-stat-sub" id="statTempMinMax">L -- | H --</span>
+                        </div>
+                        <div class="analytics-stat-card">
+                            <span class="analytics-stat-title">💧 ความชื้น</span>
+                            <span class="analytics-stat-val" id="statHumCurrent">--%</span>
+                            <span class="analytics-stat-sub" id="statHumMinMax">L -- | H --</span>
+                        </div>
+                        <div class="analytics-stat-card">
+                            <span class="analytics-stat-title">🍃 HUMIDEX</span>
+                            <span class="analytics-stat-val" id="statHxCurrent">--°C</span>
+                            <span class="analytics-stat-sub" id="statHxStatus">สบาย</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Chart Box -->
+                    <div class="chart-box-card">
+                        <div id="chartTooltip" class="chart-tooltip-box"></div>
+                        <svg id="interactiveChartSvg" class="chart-svg-interactive" viewBox="0 0 440 170" preserveAspectRatio="none">
+                            <!-- Dynamically populated via JS -->
+                        </svg>
+                        <div class="chart-legend-row">
+                            <div class="chart-legend-item">
+                                <span class="chart-legend-dot" style="background: #f87171;"></span>
+                                <span>อุณหภูมิ (°C)</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <span class="chart-legend-dot" style="background: #38bdf8;"></span>
+                                <span>ความชื้น (%)</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <span class="chart-legend-dot" style="background: #10b981;"></span>
+                                <span>Humidex (°C)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ACTIVITY TIMELINE (DEPLOYMENTS) VIEW -->
+                <div id="analyticsTimelineView" style="display: none;">
+                    <div style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">
+                        บันทึกประวัติการปรับจูน AI, คำสั่งรีโมท และการซิงค์สถานะแอร์จาก SQLite
+                    </div>
+                    <div class="timeline-scroll" id="timelineList">
+                        <div style="text-align: center; padding: 25px; color: var(--text-dim); font-size: 12px;">
+                            กำลังโหลดไทม์ไลน์...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -917,6 +1288,10 @@
         function openDrawer(id) {
             document.querySelectorAll('.drawer-overlay').forEach(d => d.classList.remove('open'));
             document.getElementById(id)?.classList.add('open');
+            if (id === 'drawerAnalytics') {
+                if (currentAnalyticsTab === 'history') fetchAnalyticsMetrics();
+                else fetchAnalyticsTimeline();
+            }
         }
 
         function closeDrawer(id) {
@@ -1008,28 +1383,30 @@
                     if (elAmbi) elAmbi.innerText = data.network.ambi_ip || 'Waiting for query...';
                 }
 
-                // 6. History List in Drawer
-                const hist = data.profile.history || [];
-                const histElem = document.getElementById('historyList');
-                if (hist.length > 0) {
-                    histElem.innerHTML = hist.map(item => `
-                        <div class="history-item">
-                            <div>
-                                <b style="color: #fff;">${item.action}</b>
-                                <div style="color: var(--text-dim); margin-top: 2px;">
-                                    AC ${item.temp}°C | Fan: ${item.fan} | Room: ${item.room_temp || '--'}°C (${item.room_humidity || '--'}%)
-                                </div>
-                            </div>
-                            <div style="text-align: right;">
-                                <span style="color: var(--ambi-teal);">${item.time}</span>
-                                <div style="font-size: 9px; color: ${item.result && item.result.includes('OK') ? '#34d399' : '#94a3b8'};">
-                                    ${item.result || ''}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    histElem.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-dim);">ยังไม่มีประวัติการสั่งงาน</div>';
+                // 6. Remote Sync Badge
+                const syncBadge = document.getElementById('remoteSyncBadge');
+                if (syncBadge) {
+                    if (isACOn) {
+                        syncBadge.innerText = 'สถานะ: แอร์เปิด (ON)';
+                        syncBadge.style.color = '#34d399';
+                        syncBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+                        syncBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    } else {
+                        syncBadge.innerText = 'สถานะ: แอร์ปิด (OFF)';
+                        syncBadge.style.color = '#94a3b8';
+                        syncBadge.style.background = 'rgba(255, 255, 255, 0.05)';
+                        syncBadge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }
+                }
+
+                // 7. Update Home Curve Chart from SQLite
+                updateHomeCurve();
+
+                // 8. If Analytics Drawer is open, refresh active tab
+                const anDrawer = document.getElementById('drawerAnalytics');
+                if (anDrawer && anDrawer.classList.contains('open')) {
+                    if (currentAnalyticsTab === 'history') fetchAnalyticsMetrics();
+                    else fetchAnalyticsTimeline();
                 }
             } catch (e) {
                 console.error("Dashboard update error:", e);
@@ -1246,6 +1623,416 @@
                     showToast(`✅ Host: ${json.network.host_ip} | WAN: ${json.network.wan_ip}`);
                 } else {
                     showToast('❌ ไม่สามารถดึงข้อมูลเครือข่ายได้');
+                }
+            } catch (e) {
+                showToast('❌ เชื่อมต่อล้มเหลว');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // SVG SMOOTH PATH BUILDER (Catmull-Rom / Bezier)
+        // -------------------------------------------------------------
+        function buildSmoothSvgPath(points) {
+            if (!points || points.length === 0) return '';
+            if (points.length === 1) return `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
+            let d = `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i === 0 ? 0 : i - 1];
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = p1.y + (p2.y - p0.y) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = p2.y - (p3.y - p1.y) / 6;
+                d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+            }
+            return d;
+        }
+
+        // -------------------------------------------------------------
+        // HOME SCREEN 4-HOUR CLIMATE CURVE
+        // -------------------------------------------------------------
+        let lastHomeCurveFetch = 0;
+        async function updateHomeCurve() {
+            const now = Date.now();
+            if (now - lastHomeCurveFetch < 10000) return; // Throttle to every 10s
+            lastHomeCurveFetch = now;
+
+            try {
+                const res = await fetch('/api/history/metrics?range=4h');
+                const json = await res.json();
+                if (json.status !== 'OK' || !json.data || !json.data.points || json.data.points.length === 0) return;
+
+                const pts = json.data.points;
+                const stats = json.data.stats;
+                if (stats.max_hum !== null) document.getElementById('chartHighHum').innerText = 'H ' + stats.max_hum + '%';
+                if (stats.min_hum !== null) document.getElementById('chartLowHum').innerText = 'L ' + stats.min_hum + '%';
+
+                let minT = stats.min_temp !== null ? stats.min_temp - 0.5 : 22;
+                let maxT = stats.max_temp !== null ? stats.max_temp + 0.5 : 30;
+                if (maxT - minT < 2) { minT -= 1; maxT += 1; }
+
+                let minH = stats.min_hum !== null ? Math.max(0, stats.min_hum - 5) : 30;
+                let maxH = stats.max_hum !== null ? Math.min(100, stats.max_hum + 5) : 80;
+                if (maxH - minH < 10) { minH -= 5; maxH += 5; }
+
+                const width = 400;
+                const height = 90;
+                const padX = 8;
+                const padY = 8;
+                const drawW = width - (padX * 2);
+                const drawH = height - (padY * 2);
+
+                const tempCoords = [];
+                const humCoords = [];
+
+                pts.forEach((p, i) => {
+                    const x = padX + (i / (pts.length - 1 || 1)) * drawW;
+                    const tRatio = (p.temperature - minT) / (maxT - minT);
+                    const yT = padY + (1 - Math.max(0, Math.min(1, tRatio))) * drawH;
+                    tempCoords.push({ x, y: yT });
+
+                    const hRatio = (p.humidity - minH) / (maxH - minH);
+                    const yH = padY + (1 - Math.max(0, Math.min(1, hRatio))) * drawH;
+                    humCoords.push({ x, y: yH });
+                });
+
+                const tempPathD = buildSmoothSvgPath(tempCoords);
+                const humPathD = buildSmoothSvgPath(humCoords);
+                const humAreaD = humPathD + ` L ${humCoords[humCoords.length - 1].x.toFixed(1)},${height} L ${humCoords[0].x.toFixed(1)},${height} Z`;
+
+                const elTemp = document.getElementById('curveTemp');
+                const elHum = document.getElementById('curveHum');
+                const elHumArea = document.getElementById('curveHumArea');
+                const dotTemp = document.getElementById('dotTemp');
+                const dotHum = document.getElementById('dotHum');
+
+                if (elTemp) elTemp.setAttribute('d', tempPathD);
+                if (elHum) elHum.setAttribute('d', humPathD);
+                if (elHumArea) elHumArea.setAttribute('d', humAreaD);
+
+                if (dotTemp && tempCoords.length > 0) {
+                    dotTemp.setAttribute('cx', tempCoords[tempCoords.length - 1].x.toFixed(1));
+                    dotTemp.setAttribute('cy', tempCoords[tempCoords.length - 1].y.toFixed(1));
+                }
+                if (dotHum && humCoords.length > 0) {
+                    dotHum.setAttribute('cx', humCoords[humCoords.length - 1].x.toFixed(1));
+                    dotHum.setAttribute('cy', humCoords[humCoords.length - 1].y.toFixed(1));
+                }
+            } catch (e) {
+                console.warn("Home curve update error:", e);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // ANALYTICS DRAWER - TABS, METRICS & ACTIVITY TIMELINE
+        // -------------------------------------------------------------
+        let currentAnalyticsTab = 'history';
+        let currentAnalyticsRange = '4h';
+
+        function switchAnalyticsTab(tab) {
+            currentAnalyticsTab = tab;
+            document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+            if (tab === 'history') {
+                document.getElementById('tabBtnHistory')?.classList.add('active');
+                document.getElementById('analyticsHistoryView').style.display = 'block';
+                document.getElementById('analyticsTimelineView').style.display = 'none';
+                fetchAnalyticsMetrics();
+            } else {
+                document.getElementById('tabBtnTimeline')?.classList.add('active');
+                document.getElementById('analyticsHistoryView').style.display = 'none';
+                document.getElementById('analyticsTimelineView').style.display = 'block';
+                fetchAnalyticsTimeline();
+            }
+        }
+
+        function changeAnalyticsRange(range) {
+            currentAnalyticsRange = range;
+            document.querySelectorAll('.range-chip').forEach(b => b.classList.remove('active'));
+            document.getElementById('range' + range)?.classList.add('active');
+            fetchAnalyticsMetrics();
+        }
+
+        async function fetchAnalyticsMetrics() {
+            try {
+                const res = await fetch('/api/history/metrics?range=' + currentAnalyticsRange);
+                const json = await res.json();
+                if (json.status !== 'OK' || !json.data) return;
+
+                const stats = json.data.stats;
+                const pts = json.data.points || [];
+
+                // Update Stat Cards
+                document.getElementById('statTempCurrent').innerText = (stats.latest_temp !== null ? stats.latest_temp : '--') + '°C';
+                document.getElementById('statTempMinMax').innerText = `L ${stats.min_temp !== null ? stats.min_temp : '--'}° | H ${stats.max_temp !== null ? stats.max_temp : '--'}° (เฉลี่ย ${stats.avg_temp || '--'}°)`;
+
+                document.getElementById('statHumCurrent').innerText = (stats.latest_hum !== null ? stats.latest_hum : '--') + '%';
+                document.getElementById('statHumMinMax').innerText = `L ${stats.min_hum !== null ? stats.min_hum : '--'}% | H ${stats.max_hum !== null ? stats.max_hum : '--'}% (เฉลี่ย ${stats.avg_hum || '--'}%)`;
+
+                document.getElementById('statHxCurrent').innerText = (stats.latest_humidex !== null ? stats.latest_humidex : '--') + '°C';
+                document.getElementById('statHxStatus').innerText = (pts.length > 0 ? pts[pts.length - 1].comfort_label : 'สบายดี');
+
+                renderInteractiveChart(json.data);
+            } catch (e) {
+                console.error("Analytics metrics error:", e);
+            }
+        }
+
+        function renderInteractiveChart(data) {
+            const svg = document.getElementById('interactiveChartSvg');
+            if (!svg) return;
+            const pts = data.points;
+            if (!pts || pts.length === 0) {
+                svg.innerHTML = '<text x="220" y="85" text-anchor="middle" fill="#64748b" font-size="12">ยังไม่มีข้อมูลสภาพอากาศสำหรับช่วงเวลานี้</text>';
+                return;
+            }
+
+            const width = 440;
+            const height = 170;
+            const padL = 36;
+            const padR = 36;
+            const padT = 18;
+            const padB = 26;
+            const drawW = width - padL - padR;
+            const drawH = height - padT - padB;
+
+            const stats = data.stats;
+            let minT = stats.min_temp !== null ? Math.floor(stats.min_temp - 0.8) : 22;
+            let maxT = stats.max_temp !== null ? Math.ceil(stats.max_temp + 0.8) : 30;
+            if (maxT - minT < 3) { minT -= 1; maxT += 2; }
+
+            let minH = stats.min_hum !== null ? Math.max(0, Math.floor(stats.min_hum - 6)) : 30;
+            let maxH = stats.max_hum !== null ? Math.min(100, Math.ceil(stats.max_hum + 6)) : 80;
+            if (maxH - minH < 12) { minH -= 6; maxH += 6; }
+
+            const tempCoords = [];
+            const humCoords = [];
+            const hxCoords = [];
+
+            pts.forEach((p, i) => {
+                const x = padL + (i / (pts.length - 1 || 1)) * drawW;
+                const yT = padT + (1 - (p.temperature - minT) / (maxT - minT)) * drawH;
+                const yH = padT + (1 - (p.humidity - minH) / (maxH - minH)) * drawH;
+                const yHx = padT + (1 - (p.humidex - minT) / (maxT - minT)) * drawH;
+
+                tempCoords.push({ x, y: yT, data: p });
+                humCoords.push({ x, y: yH, data: p });
+                hxCoords.push({ x, y: yHx, data: p });
+            });
+
+            const tempPathD = buildSmoothSvgPath(tempCoords);
+            const humPathD = buildSmoothSvgPath(humCoords);
+            const hxPathD = buildSmoothSvgPath(hxCoords);
+            const humAreaD = humPathD + ` L ${humCoords[humCoords.length - 1].x.toFixed(1)},${padT + drawH} L ${humCoords[0].x.toFixed(1)},${padT + drawH} Z`;
+
+            const midT = ((minT + maxT) / 2).toFixed(1);
+            const midH = Math.round((minH + maxH) / 2);
+            const gridYMid = padT + drawH * 0.5;
+            const gridYTop = padT;
+            const gridYBot = padT + drawH;
+
+            let html = `
+                <defs>
+                    <linearGradient id="anHumGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#0284c7" stop-opacity="0.32"/>
+                        <stop offset="100%" stop-color="#0284c7" stop-opacity="0.0"/>
+                    </linearGradient>
+                    <filter id="glowCoral" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="1.8" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Grid lines -->
+                <line x1="${padL}" y1="${gridYTop}" x2="${padL + drawW}" y2="${gridYTop}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3"/>
+                <line x1="${padL}" y1="${gridYMid}" x2="${padL + drawW}" y2="${gridYMid}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3"/>
+                <line x1="${padL}" y1="${gridYBot}" x2="${padL + drawW}" y2="${gridYBot}" stroke="rgba(255,255,255,0.1)"/>
+
+                <!-- Left Axis (Temp Coral) -->
+                <text x="${padL - 6}" y="${gridYTop + 4}" font-size="9" fill="#f87171" text-anchor="end">${maxT}°</text>
+                <text x="${padL - 6}" y="${gridYMid + 3}" font-size="9" fill="#f87171" opacity="0.8" text-anchor="end">${midT}°</text>
+                <text x="${padL - 6}" y="${gridYBot}" font-size="9" fill="#f87171" text-anchor="end">${minT}°</text>
+
+                <!-- Right Axis (Humidity Cyan) -->
+                <text x="${padL + drawW + 6}" y="${gridYTop + 4}" font-size="9" fill="#38bdf8" text-anchor="start">${maxH}%</text>
+                <text x="${padL + drawW + 6}" y="${gridYMid + 3}" font-size="9" fill="#38bdf8" opacity="0.8" text-anchor="start">${midH}%</text>
+                <text x="${padL + drawW + 6}" y="${gridYBot}" font-size="9" fill="#38bdf8" text-anchor="start">${minH}%</text>
+
+                <!-- Humidity Area & Line -->
+                <path d="${humAreaD}" fill="url(#anHumGrad)"/>
+                <path d="${humPathD}" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+
+                <!-- Humidex Dashed Line -->
+                <path d="${hxPathD}" fill="none" stroke="#10b981" stroke-width="1.8" stroke-dasharray="4,4" stroke-linecap="round" opacity="0.85"/>
+
+                <!-- Temperature Line -->
+                <path d="${tempPathD}" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" filter="url(#glowCoral)"/>
+
+                <!-- End dots -->
+                <circle cx="${tempCoords[tempCoords.length - 1].x.toFixed(1)}" cy="${tempCoords[tempCoords.length - 1].y.toFixed(1)}" r="4" fill="#f87171"/>
+                <circle cx="${humCoords[humCoords.length - 1].x.toFixed(1)}" cy="${humCoords[humCoords.length - 1].y.toFixed(1)}" r="3.5" fill="#38bdf8"/>
+
+                <!-- Interactive cursor elements -->
+                <line id="interactiveCursorLine" x1="0" y1="${padT}" x2="0" y2="${padT + drawH}" stroke="rgba(255,255,255,0.4)" stroke-dasharray="2,2" style="display:none;"/>
+                <circle id="interactiveCursorDotT" cx="0" cy="0" r="4.5" fill="#f87171" stroke="#fff" stroke-width="1.5" style="display:none;"/>
+                <circle id="interactiveCursorDotH" cx="0" cy="0" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1.5" style="display:none;"/>
+
+                <!-- Touch / Mouse overlay rect -->
+                <rect id="chartInteractiveRect" x="${padL}" y="${padT}" width="${drawW}" height="${drawH}" fill="transparent" style="cursor: crosshair;"/>
+            `;
+
+            // Time labels at bottom
+            const labelCount = Math.min(5, pts.length);
+            for (let k = 0; k < labelCount; k++) {
+                const idx = Math.floor(k * (pts.length - 1) / (labelCount - 1 || 1));
+                const pt = pts[idx];
+                const lx = padL + (idx / (pts.length - 1 || 1)) * drawW;
+                html += `<text x="${lx.toFixed(1)}" y="${height - 6}" font-size="9" fill="#94a3b8" text-anchor="${k === 0 ? 'start' : (k === labelCount - 1 ? 'end' : 'middle')}">${pt.time_str}</text>`;
+            }
+
+            svg.innerHTML = html;
+
+            const overlay = document.getElementById('chartInteractiveRect');
+            const tooltip = document.getElementById('chartTooltip');
+            const cLine = document.getElementById('interactiveCursorLine');
+            const cDotT = document.getElementById('interactiveCursorDotT');
+            const cDotH = document.getElementById('interactiveCursorDotH');
+
+            function onPointerMove(evt) {
+                const rect = svg.getBoundingClientRect();
+                const clientX = (evt.touches ? evt.touches[0].clientX : evt.clientX);
+                const mouseX = ((clientX - rect.left) / rect.width) * width;
+
+                if (mouseX < padL || mouseX > padL + drawW) {
+                    onPointerLeave();
+                    return;
+                }
+
+                let closestIdx = 0;
+                let minDist = 999999;
+                tempCoords.forEach((c, idx) => {
+                    const dist = Math.abs(c.x - mouseX);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestIdx = idx;
+                    }
+                });
+
+                const cT = tempCoords[closestIdx];
+                const cH = humCoords[closestIdx];
+                const pt = pts[closestIdx];
+
+                cLine.setAttribute('x1', cT.x.toFixed(1));
+                cLine.setAttribute('x2', cT.x.toFixed(1));
+                cLine.style.display = 'block';
+
+                cDotT.setAttribute('cx', cT.x.toFixed(1));
+                cDotT.setAttribute('cy', cT.y.toFixed(1));
+                cDotT.style.display = 'block';
+
+                cDotH.setAttribute('cx', cH.x.toFixed(1));
+                cDotH.setAttribute('cy', cH.y.toFixed(1));
+                cDotH.style.display = 'block';
+
+                tooltip.style.display = 'block';
+                tooltip.innerHTML = `
+                    <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">⏰ ${pt.datetime_str ? pt.datetime_str.split(' ')[1] : pt.time_str}</div>
+                    <div>🌡️ อุณหภูมิ: <b style="color: #f87171;">${pt.temperature}°C</b></div>
+                    <div>💧 ความชื้น: <b style="color: #38bdf8;">${pt.humidity}%</b></div>
+                    <div>🍃 Humidex: <b style="color: #10b981;">${pt.humidex}°C</b> (${pt.comfort_label})</div>
+                `;
+            }
+
+            function onPointerLeave() {
+                if (tooltip) tooltip.style.display = 'none';
+                if (cLine) cLine.style.display = 'none';
+                if (cDotT) cDotT.style.display = 'none';
+                if (cDotH) cDotH.style.display = 'none';
+            }
+
+            overlay.addEventListener('mousemove', onPointerMove);
+            overlay.addEventListener('mouseleave', onPointerLeave);
+            overlay.addEventListener('touchmove', onPointerMove, { passive: true });
+            overlay.addEventListener('touchend', onPointerLeave);
+        }
+
+        async function fetchAnalyticsTimeline() {
+            const listElem = document.getElementById('timelineList');
+            if (!listElem) return;
+            try {
+                const res = await fetch('/api/history/timeline?limit=50');
+                const json = await res.json();
+                const events = json.events || [];
+                if (events.length === 0) {
+                    listElem.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim); font-size: 12px;">ยังไม่มีข้อมูลประวัติคำสั่ง</div>';
+                    return;
+                }
+
+                const groups = {};
+                events.forEach(ev => {
+                    const g = ev.date_group || 'วันนี้ (Today)';
+                    if (!groups[g]) groups[g] = [];
+                    groups[g].push(ev);
+                });
+
+                let html = '';
+                for (const [dateGroup, groupEvents] of Object.entries(groups)) {
+                    html += `
+                        <div class="timeline-group">
+                            <div class="timeline-group-header">📅 ${dateGroup}</div>
+                            ${groupEvents.map(ev => `
+                                <div class="timeline-item-card">
+                                    <div class="timeline-connector"></div>
+                                    <div class="timeline-icon-box" style="border-color: ${ev.color}; box-shadow: 0 0 10px ${ev.color}33;">
+                                        ${ev.icon}
+                                    </div>
+                                    <div class="timeline-card-body">
+                                        <div class="timeline-card-top">
+                                            <span class="timeline-badge-pill" style="color: ${ev.color}; background: ${ev.color}22; border: 1px solid ${ev.color}44;">
+                                                ${ev.badge}
+                                            </span>
+                                            <span style="font-size: 10px; color: var(--text-dim);">${ev.time_str} (${ev.relative_time})</span>
+                                        </div>
+                                        <div class="timeline-card-title">${ev.title}</div>
+                                        ${ev.trigger_reason ? `<div class="timeline-card-reason">💡 ${ev.trigger_reason}</div>` : ''}
+                                        ${(ev.room_temp || ev.room_humidity) ? `
+                                            <div class="timeline-card-metrics">
+                                                🌡️ ห้อง: <b style="color: #fff;">${ev.room_temp || '--'}°C</b> • 
+                                                💧 ความชื้น: <b style="color: #fff;">${ev.room_humidity || '--'}%</b>
+                                                ${ev.humidex ? ` • Humidex: <b style="color: #10b981;">${ev.humidex}°C</b>` : ''}
+                                            </div>
+                                        ` : ''}
+                                        ${ev.result ? `
+                                            <div style="font-size: 9px; color: ${ev.result.includes('completeir') || ev.result.includes('OK') || ev.result.includes('Synced') ? '#34d399' : '#94a3b8'}; margin-top: 2px;">
+                                                สถานะ: ${ev.result}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                listElem.innerHTML = html;
+            } catch (e) {
+                console.error("Timeline fetch error:", e);
+                listElem.innerHTML = '<div style="text-align: center; padding: 20px; color: #f87171;">เกิดข้อผิดพลาดในการโหลดไทม์ไลน์</div>';
+            }
+        }
+
+        async function syncRemotePower(power) {
+            showToast(`🔄 กำลังซิงค์สถานะรีโมทเป็น: แอร์${power === 'On' ? 'เปิด' : 'ปิด'}...`);
+            try {
+                const res = await fetch('/api/sync/state?power=' + encodeURIComponent(power));
+                const json = await res.json();
+                if (json.status === 'OK') {
+                    showToast(`✅ ซิงค์สำเร็จ: บันทึกสถานะแอร์เป็น ${json.synced_power} แล้ว`);
+                    updateDashboard();
+                    if (currentAnalyticsTab === 'timeline') fetchAnalyticsTimeline();
+                } else {
+                    showToast('❌ ซิงค์ไม่สำเร็จ');
                 }
             } catch (e) {
                 showToast('❌ เชื่อมต่อล้มเหลว');

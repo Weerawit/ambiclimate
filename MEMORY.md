@@ -49,6 +49,9 @@
 | `/api/led/green` | GET | สั่งไฟหน้าเครื่องเป็นสีเขียวค้างทันที |
 | `/api/sensors/query` | GET | สั่ง Query อุณหภูมิและความชื้นสดจาก Ambi พอร์ต 8070 ทันที |
 | `/api/sensors/polling?enable=1` | GET | เปิด/ปิดการดึงค่าเซ็นเซอร์เบื้องหลังทุก 20 วินาที |
+| `/api/history/metrics?range=4h` | GET | ดึงข้อมูล Time-series กราฟสภาพอากาศจาก SQLite (4h, 24h, 7d) |
+| `/api/history/timeline?limit=50` | GET | ดึงรายการประวัติคำสั่ง/กิจกรรม (Deployments Timeline) จาก SQLite |
+| `/api/sync/state?power=On` | GET | ซิงค์สถานะแอร์ (เปิด/ปิด) จากรีโมทจริงหรือ Smart Plug เข้าระบบ |
 | `/api/network/detect` | POST/GET | สั่งคำนวณและตรวจจับ IP เครือข่ายใหม่ |
 | `/api/cloud/change?server=...` | GET | สั่งเปลี่ยนเป้าหมาย Cloud ในเครื่อง Ambi |
 | `/api/cloud/reconnect` | GET | สั่ง NCD ตัดและเชื่อมต่อใหม่ |
@@ -104,3 +107,4 @@ sudo docker compose down
 ### เกร็ดความรู้ทางเทคนิคเรื่อง Docker บน Raspbian Buster:
 * **ปัญหา `RuntimeError: can't start new thread`:** เกิดจาก `python:3.12-slim` รันบน Debian 12 Bookworm ที่เรียกใช้ syscall `clone3()` ซึ่งถูก `libseccomp2` รุ่นเก่าของ Buster บล็อกด้วย `EPERM`
 * **ทางแก้สำเร็จ:** ใช้ `FROM python:3.9-slim-buster` ควบคู่กับ `security_opt: [ "seccomp:unconfined" ]` ใน `docker-compose.yml`
+

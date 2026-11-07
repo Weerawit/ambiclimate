@@ -26,3 +26,7 @@ imazing_extracted/
 
 ambi_ip.txt
 user_comfort_profile.json
+ambi_data.db
+*.db
+GEMINI.md
+MEMORY.md
