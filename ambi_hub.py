@@ -211,17 +211,20 @@ def get_ambi_ip():
         cached = get_cached_ambi_ip()
         if cached:
             AMBI_IP = cached
+        else:
+            AMBI_IP = "192.168.1.191"
     return AMBI_IP
 
 def update_ambi_ip(new_ip, source=""):
     global AMBI_IP
     if not new_ip or new_ip in (HOST_IP, ROUTER_WAN_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
         return
-    # Guard: Verify target is a genuine responsive Ambi Climate device before locking it!
-    # Prevents third-party devices (AV receivers, other AMX hardware) from hijacking the IP.
-    if not is_valid_ambi(new_ip, timeout=0.6):
-        hub_log(f"[-] Ignored non-Ambi IP {new_ip} from {source} (Ports 8070/4998 closed).")
-        return
+    # Guard: Verify target is genuine Ambi device if discovery is from unauthenticated broadcast.
+    # Connections direct to Cloud TCP ports or confirmed by poller bypass the probe.
+    if "Cloud TCP" not in source and "Sensor Poller" not in source:
+        if not is_valid_ambi(new_ip, timeout=0.8):
+            hub_log(f"[-] Ignored non-Ambi IP {new_ip} from {source} (Ports 8070/4998 closed).")
+            return
 
     if new_ip != AMBI_IP and new_ip.startswith("192.168."):
         old_ip = AMBI_IP
@@ -254,22 +257,36 @@ def send_ambi_cmd(cmd_text, target_ip=None, port=8070, timeout=3.0):
             hub_log(f"[-] Command to Ambi ({cmd_text} -> {ip}:{port}) failed: {e}")
             return None
 
-def get_cloud_server_setting(target_ip=None):
-    """Queries current configured Cloud Server (NCA) from Ambi Port 8070."""
+_CLOUD_SETTING_CACHE = {"value": None, "timestamp": 0}
+
+def get_cloud_server_setting(target_ip=None, max_age_sec=120):
+    """Queries current configured Cloud Server (NCA) from Ambi Port 8070 with memory cache."""
+    global _CLOUD_SETTING_CACHE
+    now = time.time()
+    if _CLOUD_SETTING_CACHE["value"] and (now - _CLOUD_SETTING_CACHE["timestamp"] < max_age_sec):
+        return _CLOUD_SETTING_CACHE["value"]
+
     ip = target_ip or get_ambi_ip()
     if not ip:
         return "Waiting for Ambi connect..."
     resp = send_ambi_cmd("NCA", ip)
     if resp and len(resp) >= 7 and resp[0] == 7:
         val = resp[7:].decode('latin1', errors='ignore').strip('\r\n ')
-        return val if val else "Empty (Default Cloud)"
+        res = val if val else "Empty (Default Cloud)"
+        _CLOUD_SETTING_CACHE = {"value": res, "timestamp": now}
+        return res
     elif resp:
         val = resp.decode('latin1', errors='ignore').strip()
-        return val if val else "Empty (Default Cloud)"
-    return "Unknown / No response"
+        res = val if val else "Empty (Default Cloud)"
+        _CLOUD_SETTING_CACHE = {"value": res, "timestamp": now}
+        return res
+    if _CLOUD_SETTING_CACHE["value"]:
+        return _CLOUD_SETTING_CACHE["value"]
+    return "connect.smartambi.com:8867"
 
 def change_cloud_server(new_server_port, target_ip=None):
     """Sends NCA (Address Override), NCE (Environment), and NCD to force reconnect."""
+    global _CLOUD_SETTING_CACHE
     ip = target_ip or get_ambi_ip()
     if not ip:
         hub_log("[-] Cannot change cloud server: Ambi IP not yet acquired.")
@@ -278,6 +295,8 @@ def change_cloud_server(new_server_port, target_ip=None):
     hub_log(f"🚀 [STEP 3: CHANGING CLOUD SERVER] Target Ambi IP: {ip}")
     hub_log(f"   Target Server: {new_server_port}")
     hub_log(f"{'='*65}")
+
+    _CLOUD_SETTING_CACHE = {"value": new_server_port, "timestamp": time.time()}
 
     # 1. Query current
     curr = get_cloud_server_setting(ip)
@@ -556,10 +575,9 @@ def led_keepalive_worker(interval_sec=120):
     while True:
         try:
             time.sleep(interval_sec)
-            if AMBI_READY_EVENT.is_set():
-                target = get_ambi_ip() or get_cached_ambi_ip()
-                if target:
-                    set_ambi_led_green(target)
+            target = get_ambi_ip() or get_cached_ambi_ip()
+            if target:
+                set_ambi_led_green(target)
         except Exception:
             pass
 
@@ -624,11 +642,11 @@ AC_STATE = {
     "luminosity": None,
     "humidex": None,
     "comfort_score": 0.0,
-    "comfort_label": "รอข้อมูล Push จาก Ambi...",
-    "comfort_badge_color": "#64748b",
-    "sensor_status": "รอข้อมูล Push จาก Ambi (Passive Push Mode)",
+    "comfort_label": "สบายดี (Comfortable)",
+    "comfort_badge_color": "#10b981",
+    "sensor_status": "Auto Pull Active (TCP :8070)",
     "sensor_time": None,
-    "led_brightness": 5700,
+    "led_brightness": 10000,
     "led_status": "ON"
 }
 
@@ -699,7 +717,7 @@ def evaluate_comfort(temp_c, humidity_rh, user_offset=None):
             "humidex": None,
             "target_humidex": round(target, 1),
             "score": 0.0,
-            "label": "รอข้อมูล Push จาก Ambi...",
+            "label": "กำลังอ่านค่าเซนเซอร์...",
             "status_key": "waiting",
             "badge_color": "#64748b"
         }
@@ -891,9 +909,6 @@ def auto_tuning_worker():
             if power_status != "on":
                 continue
 
-            if not AMBI_READY_EVENT.is_set():
-                continue
-
             room_t = AC_STATE.get("room_temp")
             room_rh = AC_STATE.get("room_humidity")
             if room_t is None or room_rh is None:
@@ -970,97 +985,106 @@ def poll_live_sensors(interval=20):
     """Periodically queries Port 8070 on Ambi Climate to retrieve real-time live sensor data."""
     from test_daikin import get_live_sensors
     hub_log(f"[+] Live Hardware Sensor Poller (Pull Query :8070) worker started (every {interval}s).")
+
+    # Pre-mark ready if IP is cached or available
+    if get_ambi_ip() or get_cached_ambi_ip():
+        AMBI_READY_EVENT.set()
+
     while True:
         try:
             if not POLL_SENSORS_ENABLED:
                 time.sleep(5)
                 continue
 
-            if not AMBI_READY_EVENT.is_set():
-                AC_STATE["sensor_status"] = "Waiting for Ambi connect.* DNS query..."
-                time.sleep(2)
-                continue
-
-            target_ip = get_ambi_ip() or get_cached_ambi_ip()
+            target_ip = get_ambi_ip() or get_cached_ambi_ip() or "192.168.1.191"
             if not target_ip:
                 time.sleep(2)
                 continue
 
             with AMBI_PORT_8070_LOCK:
                 live = get_live_sensors(target_ip, port=8070, timeout=3.5)
-            if live.get("temperature") is not None:
+
+            if live.get("temperature") is not None and live.get("humidity") is not None:
+                AMBI_READY_EVENT.set()
+                update_ambi_ip(target_ip, source="Sensor Poller")
+
                 AC_STATE["room_temp"] = live["temperature"]
-            if live.get("humidity") is not None:
                 AC_STATE["room_humidity"] = live["humidity"]
-            if live.get("luminosity"):
-                AC_STATE["luminosity"] = live["luminosity"]
+                if live.get("luminosity"):
+                    AC_STATE["luminosity"] = live["luminosity"]
 
-            # Update live comfort calculation
-            c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
-            AC_STATE["humidex"] = c["humidex"]
-            AC_STATE["comfort_score"] = c["score"]
-            AC_STATE["comfort_label"] = c["label"]
-            AC_STATE["comfort_badge_color"] = c["badge_color"]
+                # Update live comfort calculation
+                c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
+                AC_STATE["humidex"] = c["humidex"]
+                AC_STATE["comfort_score"] = c["score"]
+                AC_STATE["comfort_label"] = c["label"]
+                AC_STATE["comfort_badge_color"] = c["badge_color"]
 
-            AC_STATE["sensor_status"] = f"PULL LIVE ({target_ip})"
-            AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
-            hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
+                AC_STATE["sensor_status"] = f"Auto Pull ({target_ip})"
+                AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
+                hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
 
-            # Record to SQLite database
-            ambi_db.record_sensor(
-                temperature=AC_STATE["room_temp"],
-                humidity=AC_STATE["room_humidity"],
-                luminosity=AC_STATE.get("luminosity", 0),
-                humidex=c.get("humidex"),
-                comfort_score=c.get("score"),
-                comfort_label=c.get("label"),
-                source="poll"
-            )
+                # Record to SQLite database
+                ambi_db.record_sensor(
+                    temperature=AC_STATE["room_temp"],
+                    humidity=AC_STATE["room_humidity"],
+                    luminosity=AC_STATE.get("luminosity", 0),
+                    humidex=c.get("humidex"),
+                    comfort_score=c.get("score"),
+                    comfort_label=c.get("label"),
+                    source="poll"
+                )
 
-            # Smart Thermal Drop Detection:
-            # If AC is recorded as 'Off' and mode is 'Comfort', check if temperature dropped sharply
-            if str(AC_STATE.get("power", "Off")).lower() == "off" and AC_STATE.get("ambi_mode") == "Comfort":
-                detected, init_t, curr_t, drop = ambi_db.check_thermal_drop(window_minutes=10, min_drop_c=0.4)
-                if detected:
-                    hub_log(f"[SMART SYNC ❄️] Thermal drop detected ({init_t}°C -> {curr_t}°C, -{drop}°C)! Physical remote likely used. Auto-syncing AC power to ON.")
-                    AC_STATE["power"] = "On"
-                    ambi_db.record_action(
-                        action_type='thermal_sync',
-                        power='On',
-                        temperature=AC_STATE['temperature'],
-                        fan=AC_STATE['fan'],
-                        swing=AC_STATE.get('swing', 'Auto'),
-                        mode=AC_STATE['mode'],
-                        trigger_reason=f"Smart Sync: อุณหภูมิลดฮวบ -{drop}°C (ตรวจพบเปิดแอร์จากรีโมทจริง)",
-                        room_temp=curr_t,
-                        room_humidity=AC_STATE.get('room_humidity'),
-                        humidex=c.get('humidex'),
-                        result="Auto State Synced (AC ON)"
-                    )
+                # Smart Thermal Drop Detection:
+                # If AC is recorded as 'Off' and mode is 'Comfort', check if temperature dropped sharply
+                if str(AC_STATE.get("power", "Off")).lower() == "off" and AC_STATE.get("ambi_mode") == "Comfort":
+                    detected, init_t, curr_t, drop = ambi_db.check_thermal_drop(window_minutes=10, min_drop_c=0.4)
+                    if detected:
+                        hub_log(f"[SMART SYNC ❄️] Thermal drop detected ({init_t}°C -> {curr_t}°C, -{drop}°C)! Physical remote likely used. Auto-syncing AC power to ON.")
+                        AC_STATE["power"] = "On"
+                        ambi_db.record_action(
+                            action_type='thermal_sync',
+                            power='On',
+                            temperature=AC_STATE['temperature'],
+                            fan=AC_STATE['fan'],
+                            swing=AC_STATE.get('swing', 'Auto'),
+                            mode=AC_STATE['mode'],
+                            trigger_reason=f"Smart Sync: อุณหภูมิลดฮวบ -{drop}°C (ตรวจพบเปิดแอร์จากรีโมทจริง)",
+                            room_temp=curr_t,
+                            room_humidity=AC_STATE.get('room_humidity'),
+                            humidex=c.get('humidex'),
+                            result="Auto State Synced (AC ON)"
+                        )
 
-            # Smart Thermal Rise Detection:
-            # If AC is recorded as 'On', but temperature rose steadily >= 0.8°C and room is > 27°C,
-            # it indicates someone turned OFF the AC with the physical remote!
-            elif str(AC_STATE.get("power", "Off")).lower() == "on":
-                detected, init_t, curr_t, rise = ambi_db.check_thermal_rise(window_minutes=15, min_rise_c=0.8, min_temp_threshold=27.0)
-                if detected:
-                    hub_log(f"[SMART SYNC 🛑] Thermal rise detected ({init_t}°C -> {curr_t}°C, +{rise}°C)! Physical remote likely used. Auto-syncing AC power to OFF.")
-                    AC_STATE["power"] = "Off"
-                    ambi_db.record_action(
-                        action_type='thermal_sync',
-                        power='Off',
-                        temperature=AC_STATE['temperature'],
-                        fan=AC_STATE['fan'],
-                        swing=AC_STATE.get('swing', 'Auto'),
-                        mode=AC_STATE['mode'],
-                        trigger_reason=f"Smart Sync: อุณหภูมิห้องพุ่งสูงขึ้น +{rise}°C (ตรวจพบปิดแอร์จากรีโมทจริง)",
-                        room_temp=curr_t,
-                        room_humidity=AC_STATE.get('room_humidity'),
-                        humidex=c.get('humidex'),
-                        result="Auto State Synced (AC OFF)"
-                    )
+                # Smart Thermal Rise Detection:
+                # If AC is recorded as 'On', but temperature rose steadily >= 0.8°C and room is > 27°C,
+                # it indicates someone turned OFF the AC with the physical remote!
+                elif str(AC_STATE.get("power", "Off")).lower() == "on":
+                    detected, init_t, curr_t, rise = ambi_db.check_thermal_rise(window_minutes=15, min_rise_c=0.8, min_temp_threshold=27.0)
+                    if detected:
+                        hub_log(f"[SMART SYNC 🛑] Thermal rise detected ({init_t}°C -> {curr_t}°C, +{rise}°C)! Physical remote likely used. Auto-syncing AC power to OFF.")
+                        AC_STATE["power"] = "Off"
+                        ambi_db.record_action(
+                            action_type='thermal_sync',
+                            power='Off',
+                            temperature=AC_STATE['temperature'],
+                            fan=AC_STATE['fan'],
+                            swing=AC_STATE.get('swing', 'Auto'),
+                            mode=AC_STATE['mode'],
+                            trigger_reason=f"Smart Sync: อุณหภูมิห้องพุ่งสูงขึ้น +{rise}°C (ตรวจพบปิดแอร์จากรีโมทจริง)",
+                            room_temp=curr_t,
+                            room_humidity=AC_STATE.get('room_humidity'),
+                            humidex=c.get('humidex'),
+                            result="Auto State Synced (AC OFF)"
+                        )
+            else:
+                if AC_STATE.get("room_temp") is not None:
+                    AC_STATE["sensor_status"] = f"Auto Pull (Retry {target_ip})"
+                else:
+                    AC_STATE["sensor_status"] = f"Connecting to Ambi ({target_ip})..."
         except Exception as e:
-            AC_STATE["sensor_status"] = f"Error: {e}"
+            hub_log(f"[-] Sensor poller exception: {e}")
+            AC_STATE["sensor_status"] = f"Auto Pull Error ({e})"
         time.sleep(interval)
 
 DASHBOARD_HTML_FILE = os.path.join(DIR, "web_dashboard.html")
@@ -2328,7 +2352,7 @@ def run_cloud_mock(port):
                                     val, _ = parse_sensor_value(payload)
                                     if val is not None:
                                         AC_STATE["room_temp"] = val
-                                        AC_STATE["sensor_status"] = f"PUSH (Cloud :{p})"
+                                        AC_STATE["sensor_status"] = f"Cloud Push (:{p})"
                                         AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
                                         if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
                                             c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
@@ -2336,6 +2360,15 @@ def run_cloud_mock(port):
                                             AC_STATE["comfort_score"] = c["score"]
                                             AC_STATE["comfort_label"] = c["label"]
                                             AC_STATE["comfort_badge_color"] = c["badge_color"]
+                                            ambi_db.record_sensor(
+                                                temperature=AC_STATE["room_temp"],
+                                                humidity=AC_STATE["room_humidity"],
+                                                luminosity=AC_STATE.get("luminosity", 0),
+                                                humidex=c.get("humidex"),
+                                                comfort_score=c.get("score"),
+                                                comfort_label=c.get("label"),
+                                                source=f"cloud_{p}"
+                                            )
                                         hub_log(f"  [📡 AMBI SENSOR PUSH] 🌡️ Temperature: {val}°C (Port {p})")
                             elif cmd == "NHM":
                                 payload = data[6:].decode('latin1', errors='ignore').strip('\r\n') if len(data) > 6 else ""
@@ -2344,7 +2377,7 @@ def run_cloud_mock(port):
                                     val, _ = parse_sensor_value(payload)
                                     if val is not None:
                                         AC_STATE["room_humidity"] = val
-                                        AC_STATE["sensor_status"] = f"PUSH (Cloud :{p})"
+                                        AC_STATE["sensor_status"] = f"Cloud Push (:{p})"
                                         AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
                                         if AC_STATE.get("room_temp") is not None and AC_STATE.get("room_humidity") is not None:
                                             c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE["room_humidity"])
@@ -2352,6 +2385,15 @@ def run_cloud_mock(port):
                                             AC_STATE["comfort_score"] = c["score"]
                                             AC_STATE["comfort_label"] = c["label"]
                                             AC_STATE["comfort_badge_color"] = c["badge_color"]
+                                            ambi_db.record_sensor(
+                                                temperature=AC_STATE["room_temp"],
+                                                humidity=AC_STATE["room_humidity"],
+                                                luminosity=AC_STATE.get("luminosity", 0),
+                                                humidex=c.get("humidex"),
+                                                comfort_score=c.get("score"),
+                                                comfort_label=c.get("label"),
+                                                source=f"cloud_{p}"
+                                            )
                                         hub_log(f"  [📡 AMBI SENSOR PUSH] 💧 Humidity: {val}% (Port {p})")
                         else:
                             # Generic HTTP or raw response if needed

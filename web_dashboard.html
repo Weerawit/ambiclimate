@@ -1500,7 +1500,7 @@
                     document.getElementById('chartLowHum').innerText = 'L ' + Math.max(20, Math.round(rh - 8)) + '%';
                 }
                 document.getElementById('sensorDetailText').innerText = 
-                    `${data.ac_state.sensor_status || 'Passive Push'} • อัปเดตล่าสุด: ${data.ac_state.sensor_time || '--'}`;
+                    `${data.ac_state.sensor_status || 'Auto Pull (20s)'} • อัปเดตล่าสุด: ${data.ac_state.sensor_time || '--'}`;
 
                 // 5. Network Information
                 if (data.network) {
@@ -1822,11 +1822,16 @@
                 const drawW = width - (padX * 2);
                 const drawH = height - (padY * 2);
 
+                const startTs = json.data.start_timestamp || (Date.now() / 1000 - 4 * 3600);
+                const endTs = json.data.end_timestamp || (Date.now() / 1000);
+                const timeSpan = Math.max(1, endTs - startTs);
+
                 const tempCoords = [];
                 const humCoords = [];
 
                 pts.forEach((p, i) => {
-                    const x = padX + (i / (pts.length - 1 || 1)) * drawW;
+                    const timeRatio = Math.max(0, Math.min(1, (p.timestamp - startTs) / timeSpan));
+                    const x = padX + timeRatio * drawW;
                     const tRatio = (p.temperature - minT) / (maxT - minT);
                     const yT = padY + (1 - Math.max(0, Math.min(1, tRatio))) * drawH;
                     tempCoords.push({ x, y: yT });
@@ -1941,11 +1946,16 @@
             let maxH = stats.max_hum !== null ? Math.min(100, Math.ceil(stats.max_hum + 6)) : 80;
             if (maxH - minH < 12) { minH -= 6; maxH += 6; }
 
+            const startTs = data.start_timestamp || (Date.now() / 1000 - (data.range_hours || 4) * 3600);
+            const endTs = data.end_timestamp || (Date.now() / 1000);
+            const timeSpan = Math.max(1, endTs - startTs);
+
             const tempCoords = [];
             const humCoords = [];
 
             pts.forEach((p, i) => {
-                const x = padL + (i / (pts.length - 1 || 1)) * drawW;
+                const timeRatio = Math.max(0, Math.min(1, (p.timestamp - startTs) / timeSpan));
+                const x = padL + timeRatio * drawW;
                 const yT = padT + (1 - (p.temperature - minT) / (maxT - minT)) * drawH;
                 const yH = padT + (1 - (p.humidity - minH) / (maxH - minH)) * drawH;
 
@@ -2165,7 +2175,7 @@
         updateDashboard();
         fetchCloudStatus();
         setInterval(updateDashboard, 3000);
-        setInterval(fetchCloudStatus, 15000);
+        setInterval(fetchCloudStatus, 60000);
     </script>
 </body>
 </html>

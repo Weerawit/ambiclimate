@@ -18,11 +18,11 @@ from daikin_ir import build_daikin_command, frames_to_sendir
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 IP_CACHE_FILE = os.path.join(DIR, "ambi_ip.txt")
-FALLBACK_IP = "192.168.1.156"
+FALLBACK_IP = "192.168.1.191"
 AMBI_IP = FALLBACK_IP
 AMBI_PORT = 4998
 
-def is_valid_ambi(ip, timeout=0.3):
+def is_valid_ambi(ip, timeout=0.8):
     """Verifies whether an IP is an active, responsive Ambi Climate device."""
     if not ip:
         return False
@@ -100,8 +100,8 @@ def discover_ambi_ip():
             pass
 
     # 3. Check known recent IP candidates
-    for candidate in ["192.168.1.156", "192.168.1.163", "192.168.1.152", "192.168.1.151", "192.168.1.121", "192.168.1.181"]:
-        if is_valid_ambi(candidate, timeout=0.5):
+    for candidate in ["192.168.1.191", "192.168.1.156", "192.168.1.163", "192.168.1.152", "192.168.1.151", "192.168.1.121", "192.168.1.181"]:
+        if is_valid_ambi(candidate, timeout=0.8):
             save_ambi_ip(candidate)
             return candidate
 
@@ -110,7 +110,7 @@ def discover_ambi_ip():
 def get_ambi_ip():
     """Returns the verified, live Ambi Climate IP address (auto-discovering if changed)."""
     global AMBI_IP
-    if not is_valid_ambi(AMBI_IP, timeout=0.3):
+    if not is_valid_ambi(AMBI_IP, timeout=0.8):
         discovered = discover_ambi_ip()
         if discovered:
             AMBI_IP = discovered

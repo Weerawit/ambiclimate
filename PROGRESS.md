@@ -869,6 +869,37 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * **Pass 8 (Visuals):** ปรับดีไซน์ Hero Dial ให้เสมือนหน้าปัดเครื่องมือวัดทางกายภาพ และกราฟ SVG แบบ Catmull-Rom spline
    * **Pass 9 (Motion):** ตัด hover scale และ `transition-all` หันมาใช้ micro-transitions ที่ระบุ property ชัดเจน พร้อม touch active feedback
 
+---
+
+## 44. แก้ไขปัญหาข้อมูลกราฟไม่บันทึกอัตโนมัติ (Graph Stalled), ปลดล็อก Sensor Poller, และยกเลิกสถานะ "รอข้อมูล Push"
+
+1. **สาเหตุของปัญหาที่กราฟหยุดอัปเดตตั้งแต่ 8 โมงเช้า:**
+   * ตัวแปร `AMBI_READY_EVENT` ใน `ambi_hub.py` ถูกออกแบบเดิมให้รอรับ DNS Query (`connect.*`) บนพอร์ต 53 เท่านั้น
+   * บน Raspberry Pi พอร์ต 53 มักถูกเซอร์วิสระบบ (เช่น `systemd-resolved` หรือ `dnsmasq`) ใช้งานอยู่แล้ว ทำให้ DNS Server ในฮับ Bind พอร์ตไม่สำเร็จ หรือ Ambi Climate แคช DNS ไว้แล้วจึงไม่ได้ส่ง Query ซ้ำหลังคอนเทนเนอร์รีบูต
+   * ในฟังก์ชัน `poll_live_sensors(interval=20)` มีคำสั่ง `if not AMBI_READY_EVENT.is_set(): time.sleep(2); continue` ขวางอยู่ ทำให้เมื่อคอนเทนเนอร์เริ่มใหม่ Background Poller จะวนลูปหลับตลอดกาล ไม่เคยได้ยิงพอร์ต 8070 เพื่อดึงอุณหภูมิและความชื้นเลยแม้แต่ครั้งเดียว
+   * เมื่อไม่มีการดึงค่า ข้อมูลสภาพอากาศจึงไม่ถูกบันทึกลง SQLite ตาราง `sensor_telemetry` กราฟ 4 ชม. จึงค้างอยู่ที่จุด Seed เดิมเมื่อ 8 โมงเช้า
+
+2. **สาเหตุของข้อความ/ปุ่ม "รอข้อมูล Push":**
+   * เมื่อตัวแปร `room_temp` และ `room_humidity` ใน `AC_STATE` เป็น `None` ฟังก์ชัน `evaluate_comfort()` จะคืนค่าข้อความเริ่มต้นเป็น `"รอข้อมูล Push จาก Ambi..."`
+   * บนหน้า Web Dashboard ตัว Comfort Pill และ Dial Bubble จะแสดงข้อความ `"รอข้อมูล Push จาก Ambi..."` ทำให้ผู้ใช้เข้าใจผิดว่าเป็นปุ่มหรือระบบกำลังนั่งรอข้อมูล Push
+   * ในความเป็นจริง ฮาร์ดแวร์ Ambi Climate 2 ไม่ได้ส่ง Push สภาพอากาศอย่างสม่ำเสมอ แต่สถาปัตยกรรมที่แท้จริงคือการใช้ Active Pull ผ่าน TCP พอร์ต `8070` ทุก 20 วินาที
+
+3. **การแก้ไขและการปรับปรุง:**
+   * **`ambi_hub.py`:**
+     * ปลดล็อก `poll_live_sensors` ให้เริ่มทำงานทันทีโดยไม่ต้องรอ `AMBI_READY_EVENT` จาก DNS
+     * เมื่อดึงค่าจากพอร์ต 8070 สำเร็จ จะสั่ง `AMBI_READY_EVENT.set()` และอัปเดตสถานะเป็น `Auto Pull (IP)` ทันที
+     * ปลดล็อก `auto_tuning_worker` และ `led_keepalive_worker` จาก `AMBI_READY_EVENT` ให้ทำงานต่อเนื่องตราบใดที่มีข้อมูลสภาพอากาศ
+     * เพิ่ม In-memory Cache ให้ฟังก์ชัน `get_cloud_server_setting()` (TTL 120 วินาที) ป้องกันไม่ให้การรีเฟรชหน้าเว็บหน้าต่าง Device ส่งคำสั่ง `NCA` ซ้ำๆ ผ่าน TCP 8070 ไปแย่ง Socket ของ Ambi
+     * ปรับปรุง `update_ambi_ip` ให้รับ IP จาก Cloud Mock และ Sensor Poller ได้อย่างแม่นยำ ไม่ถูก Reject ด้วย Probe timeout สั้นเกินไป
+     * อัปเดตข้อความเริ่มต้นของ `AC_STATE` และ `evaluate_comfort()` เป็น `"กำลังอ่านค่าเซนเซอร์..."` และ `"Auto Pull Active"` ยกเลิกข้อความ `"รอข้อมูล Push"` ทั้งหมด
+   * **`web_dashboard.html`:**
+     * ปรับปรุงอัลกอริทึมพล็อตเส้นกราฟ SVG ทั้งหน้าแรก (Home 4h Curve) และหน้าต่าง Analytics ให้คำนวณแกน X ตาม Timestamp จริง (`timeRatio = (p.timestamp - startTs) / timeSpan`) แทนการเฉลี่ยตาม Index ทำให้เส้นกราฟและจุดกระพริบ Live Dot วิ่งมาแตะขอบขวา ("Now") ตามเวลาจริงอย่างแม่นยำ
+     * ปรับความถี่การเรียก `fetchCloudStatus` จาก 15 วินาที เป็น 60 วินาที ลดภาระการสื่อสาร
+   * **`test_daikin.py` & `ambi_ip.txt`:**
+     * ปรับ Fallback IP และ Candidate ลำดับแรกเป็น `192.168.1.191` (IP ล่าสุดที่ Router จ่ายให้ Ambi)
+     * ปรับ Timeout ของ `is_valid_ambi` เป็น 0.8 วินาที เพื่อความเสถียรบนเครือข่าย Wi-Fi
+
+
 
 
 

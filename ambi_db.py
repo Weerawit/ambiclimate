@@ -428,6 +428,8 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
         return {
             "range_hours": hours,
             "count": 0,
+            "start_timestamp": start_ts,
+            "end_timestamp": now,
             "points": [],
             "stats": {
                 "min_temp": None, "max_temp": None, "avg_temp": None,
@@ -485,6 +487,8 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
     return {
         "range_hours": hours,
         "count": total_count,
+        "start_timestamp": start_ts,
+        "end_timestamp": now,
         "points": points,
         "stats": stats
     }
