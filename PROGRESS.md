@@ -940,6 +940,19 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
      * เพิ่มป้ายกำกับพิเศษ `AI SETTING` และ `🤖 AI Adjust` ชัดเจนในแท็บ "ประวัติกิจกรรม"
      * แสดงบล็อกเหตุผลที่ AI ปรับจูน (Feels vs Target Humidex) ชัดเจนและอ่านง่ายตามแนวทางของคู่มือ Ambi Climate
 
+4. **ฟังก์ชันการชดเชยอุณหภูมิเซนเซอร์ (Sensor Temperature Calibration Offset):**
+   * **ปัญหาที่พบ:** ตัวเครื่อง Ambi Climate มีความร้อนสะสมของแผงวงจรด้านใน (Parasitic board heat) ทำให้ค่า Raw เซนเซอร์จาก Port 8070 อ่านได้สูงกว่าอุณหภูมิของจุดที่คนนั่งจริง 1–2°C
+   * **การแก้ไขในฐานข้อมูล (`ambi_db.py`):**
+     * เพิ่มคอลัมน์ `temp_calibration_offset` ในตาราง `comfort_profile` พร้อม Auto-migration
+     * บันทึกและโหลดค่า Offset ชดเชยอุณหภูมิแบบถาวร
+   * **การคำนวณในฮับ (`ambi_hub.py`):**
+     * ในลูป `poll_live_sensors`: เก็บทั้ง `room_temp_raw` (ค่าดิบ) และคำนวณ `room_temp = round(raw_t + offset, 2)` เพื่อใช้ประเมิน Humidex และควบคุมแอร์
+     * เพิ่ม API `/api/settings/calibration?temp_offset=-1.5` สำหรับปรับเปลี่ยนค่า Offset ทันที
+   * **หน้าจอควบคุม (`web_dashboard.html`):**
+     * เพิ่มแผงตั้งค่า **"ชดเชยอุณหภูมิเซนเซอร์ (Calibration)"** ใน Device Settings Drawer (`drawerDevice`)
+     * มีปุ่มเลือก Preset ชดเชยด่วน (`-2.0°C`, `-1.5°C`, `-1.0°C`, `-0.5°C`, `0.0°C`)
+     * แสดงเปรียบเทียบค่าที่อ่านได้จริงจากฮาร์ดแวร์ Ambi กับค่าที่แสดงผลจริงในห้องแบบเรียลไทม์
+
 
 
 

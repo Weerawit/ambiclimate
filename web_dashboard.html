@@ -1459,6 +1459,27 @@
                     </div>
                 </div>
 
+                <!-- 2.5 Sensor Calibration Offset (ชดเชยอุณหภูมิเซนเซอร์) -->
+                <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="control-label">ชดเชยอุณหภูมิเซนเซอร์ (Calibration)</span>
+                        <span id="tempCalibValText" style="font-size: 11px; font-weight: 600; color: #00c4b4; font-variant-numeric: tabular-nums;">0.0°C</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px;">
+                        ปรับชดเชยความร้อนสะสมของตัวเครื่อง Ambi เพื่อให้อุณหภูมิตรงกับจุดที่นั่งทำงานจริง
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                        <button class="btn-opt btn-calib-opt" data-calib="-2.0" onclick="setTempCalibration(-2.0)">-2.0°C</button>
+                        <button class="btn-opt btn-calib-opt" data-calib="-1.5" onclick="setTempCalibration(-1.5)">-1.5°C</button>
+                        <button class="btn-opt btn-calib-opt" data-calib="-1.0" onclick="setTempCalibration(-1.0)">-1.0°C</button>
+                        <button class="btn-opt btn-calib-opt" data-calib="-0.5" onclick="setTempCalibration(-0.5)">-0.5°C</button>
+                        <button class="btn-opt btn-calib-opt active" data-calib="0.0" onclick="setTempCalibration(0.0)">0.0°C</button>
+                    </div>
+                    <div id="tempCalibCompareText" style="font-size: 10px; color: var(--text-secondary); text-align: center; margin-top: 6px; font-variant-numeric: tabular-nums;">
+                        อ่านจากเครื่อง: <span id="calibRawTempText">--</span>°C &bull; แสดงผลจริง: <span id="calibActiveTempText" style="font-weight: 500; color: var(--text-primary);">--</span>
+                    </div>
+                </div>
+
                 <!-- 3. Cloud Target Redirect (NCE / NCD) -->
                 <div class="control-group" style="border-top: 1px solid var(--border-hairline); padding-top: 12px;">
                     <div class="control-label">ปลายทาง Cloud Server (NCE / NCD)</div>
@@ -1778,6 +1799,21 @@
                     }
                 }
 
+                // 7.5 Calibration in Device Settings
+                const calOffset = (data.profile && data.profile.temp_calibration_offset !== undefined) ? data.profile.temp_calibration_offset : 0.0;
+                const calText = document.getElementById('tempCalibValText');
+                if (calText) calText.innerText = (calOffset > 0 ? '+' : '') + Number(calOffset).toFixed(1) + '°C';
+                const elRaw = document.getElementById('calibRawTempText');
+                if (elRaw) elRaw.innerText = (data.ac_state.room_temp_raw !== undefined && data.ac_state.room_temp_raw !== null) ? data.ac_state.room_temp_raw : (rt || '--');
+                const elAct = document.getElementById('calibActiveTempText');
+                if (elAct) elAct.innerText = (rt !== null && rt !== undefined) ? (rt + '°C') : '--';
+
+                document.querySelectorAll('.btn-calib-opt').forEach(btn => {
+                    const v = parseFloat(btn.getAttribute('data-calib'));
+                    if (Math.abs(v - calOffset) < 0.05) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+
                 // 8. Update Home Curve Chart
                 updateHomeCurve();
 
@@ -1965,6 +2001,23 @@
                 }
             } catch (e) {
                 showToast('เกิดข้อผิดพลาด');
+            }
+        }
+
+        // Sensor Calibration
+        async function setTempCalibration(val) {
+            showToast(`กำลังตั้งค่าชดเชยอุณหภูมิ: ${val > 0 ? '+' : ''}${val}°C...`);
+            try {
+                const res = await fetch(`/api/settings/calibration?temp_offset=${val}`);
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    showToast(`ชดเชยเรียบร้อย (${val > 0 ? '+' : ''}${val}°C) -> อุณหภูมิใหม่ ${data.room_temp}°C`);
+                    updateDashboard();
+                } else {
+                    showToast('ตั้งค่าไม่สำเร็จ');
+                }
+            } catch (e) {
+                showToast('การเชื่อมต่อล้มเหลว');
             }
         }
 

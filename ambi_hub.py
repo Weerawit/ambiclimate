@@ -638,6 +638,7 @@ AC_STATE = {
     "swing": "Auto",
     "last_seen": None,
     "room_temp": None,
+    "room_temp_raw": None,
     "room_humidity": None,
     "luminosity": None,
     "humidex": None,
@@ -646,6 +647,7 @@ AC_STATE = {
     "comfort_badge_color": "#10b981",
     "sensor_status": "Auto Pull Active (TCP :8070)",
     "sensor_time": None,
+    "temp_calibration_offset": 0.0,
     "led_brightness": 10000,
     "led_status": "ON"
 }
@@ -657,6 +659,7 @@ DEFAULT_COMFORT_PROFILE = {
     "auto_tune_enabled": True,
     "target_base_humidex": 26.0,
     "user_offset": 0.0,
+    "temp_calibration_offset": 0.0,
     "min_temp": 22,
     "max_temp": 27,
     "cooldown_minutes": 10,
@@ -1011,8 +1014,16 @@ def poll_live_sensors(interval=20):
                 AMBI_READY_EVENT.set()
                 update_ambi_ip(target_ip, source="Sensor Poller")
 
-                AC_STATE["room_temp"] = live["temperature"]
-                AC_STATE["room_humidity"] = live["humidity"]
+                raw_t = live["temperature"]
+                raw_h = live["humidity"]
+                calib_offset = float(COMFORT_PROFILE.get("temp_calibration_offset", 0.0))
+                calibrated_t = round(raw_t + calib_offset, 2)
+
+                AC_STATE["room_temp_raw"] = raw_t
+                AC_STATE["room_temp"] = calibrated_t
+                AC_STATE["room_humidity_raw"] = raw_h
+                AC_STATE["room_humidity"] = raw_h
+                AC_STATE["temp_calibration_offset"] = calib_offset
                 if live.get("luminosity"):
                     AC_STATE["luminosity"] = live["luminosity"]
 
@@ -1025,7 +1036,8 @@ def poll_live_sensors(interval=20):
 
                 AC_STATE["sensor_status"] = f"Auto Pull ({target_ip})"
                 AC_STATE["sensor_time"] = time.strftime('%H:%M:%S')
-                hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
+                calib_msg = f" (Raw: {raw_t}°C, Offset: {calib_offset:+}°C)" if calib_offset != 0 else ""
+                hub_log(f"[SENSOR UPDATE PULL] Temp: {AC_STATE['room_temp']}°C{calib_msg} | Hum: {AC_STATE['room_humidity']}% | Humidex: {c['humidex']}°C ({c['label']}) | IP: {target_ip}")
 
                 # Record to SQLite database
                 ambi_db.record_sensor(
@@ -1690,6 +1702,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                     "auto_tune_enabled": COMFORT_PROFILE.get("auto_tune_enabled", True),
                     "target_base_humidex": COMFORT_PROFILE.get("target_base_humidex", 26.0),
                     "user_offset": COMFORT_PROFILE.get("user_offset", 0.0),
+                    "temp_calibration_offset": COMFORT_PROFILE.get("temp_calibration_offset", 0.0),
                     "min_temp": COMFORT_PROFILE.get("min_temp", 22),
                     "max_temp": COMFORT_PROFILE.get("max_temp", 27),
                     "cooldown_minutes": COMFORT_PROFILE.get("cooldown_minutes", 10),
@@ -1800,6 +1813,39 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({
                 "status": "OK",
                 "auto_tune_enabled": COMFORT_PROFILE["auto_tune_enabled"]
+            }).encode('utf-8'))
+            return
+
+        # 4.05 Sensor Calibration API (Temperature Offset)
+        if path == '/api/settings/calibration':
+            t_off = query.get('temp_offset', [None])[0]
+            if t_off is not None:
+                try:
+                    val = round(float(t_off), 2)
+                    COMFORT_PROFILE["temp_calibration_offset"] = val
+                    save_comfort_profile(COMFORT_PROFILE)
+                    raw_t = AC_STATE.get("room_temp_raw")
+                    if raw_t is None:
+                        raw_t = AC_STATE.get("room_temp")
+                    if raw_t is not None:
+                        AC_STATE["room_temp"] = round(raw_t + val, 2)
+                        AC_STATE["temp_calibration_offset"] = val
+                        c = evaluate_comfort(AC_STATE["room_temp"], AC_STATE.get("room_humidity"))
+                        AC_STATE["humidex"] = c["humidex"]
+                        AC_STATE["comfort_score"] = c["score"]
+                        AC_STATE["comfort_label"] = c["label"]
+                        AC_STATE["comfort_badge_color"] = c["badge_color"]
+                    hub_log(f"[SENSOR CALIBRATION] Updated temp offset to {val:+}°C (Room Temp: {AC_STATE.get('room_temp')}°C)")
+                except Exception as e:
+                    hub_log(f"[-] Invalid calibration param: {e}")
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "OK",
+                "temp_calibration_offset": COMFORT_PROFILE.get("temp_calibration_offset", 0.0),
+                "room_temp": AC_STATE.get("room_temp"),
+                "room_temp_raw": AC_STATE.get("room_temp_raw")
             }).encode('utf-8'))
             return
 
