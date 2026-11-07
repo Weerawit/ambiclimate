@@ -352,7 +352,7 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
             return f"Error connecting to Ambi on {ip}:8070 -> {e}"
 
 
-def set_ambi_led_green(target_ip=None, brightness=5730):
+def set_ambi_led_green(target_ip=None, brightness=None):
     """
     Directly sets Ambi Climate hardware LED to SOLID GREEN:
     1. Sends NSD (Setup Done) & NCD1 (Stop offline blink loop)
@@ -363,7 +363,8 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
     if not ip:
         hub_log("[-] Cannot set LED: Ambi IP not yet acquired.")
         return False
-    hub_log(f"[*] Setting Ambi Climate LED to SOLID GREEN on {ip}:8070...")
+    b_val = brightness if brightness is not None else AC_STATE.get("led_brightness", 5700)
+    hub_log(f"[*] Setting Ambi Climate LED to SOLID GREEN ({b_val} PWM) on {ip}:8070...")
     with AMBI_PORT_8070_LOCK:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -382,7 +383,7 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
             except Exception: pass
 
             # 2. Enable brightness PWM
-            s.sendall(b"\x0700NLL1 " + str(brightness).encode("ascii") + b"\r")
+            s.sendall(b"\x0700NLL1 " + str(b_val).encode("ascii") + b"\r")
             time.sleep(0.15)
             try: s.recv(256)
             except Exception: pass
@@ -404,7 +405,8 @@ def set_ambi_led_green(target_ip=None, brightness=5730):
             except Exception: pass
 
             s.close()
-            hub_log(f"✅ [🟢 LED ACTIVATED] Ambi Climate ({ip}) front LED is now SOLID GREEN!")
+            AC_STATE["led_status"] = "ON"
+            hub_log(f"✅ [🟢 LED ACTIVATED] Ambi Climate ({ip}) front LED is now SOLID GREEN at {b_val} PWM!")
             return True
         except Exception as e:
             hub_log(f"[-] Error setting LED to Green on {ip}: {e}")
@@ -421,6 +423,7 @@ def set_ambi_led_brightness(level: int, target_ip=None):
         return False
 
     level = max(0, min(10000, int(level)))
+    AC_STATE["led_brightness"] = level
     hub_log(f"[*] Setting Ambi Climate LED brightness to {level} on {ip}:8070...")
     with AMBI_PORT_8070_LOCK:
         try:
@@ -624,7 +627,9 @@ AC_STATE = {
     "comfort_label": "รอข้อมูล Push จาก Ambi...",
     "comfort_badge_color": "#64748b",
     "sensor_status": "รอข้อมูล Push จาก Ambi (Passive Push Mode)",
-    "sensor_time": None
+    "sensor_time": None,
+    "led_brightness": 5700,
+    "led_status": "ON"
 }
 
 # -------------------------------------------------------------

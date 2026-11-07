@@ -1100,7 +1100,9 @@
                     </div>
                     <input type="range" id="brightnessSlider" min="0" max="10000" step="500" value="5700" 
                            style="width: 100%; accent-color: var(--ambi-teal); cursor: pointer; margin: 6px 0;" 
-                           onchange="changeBrightness(this.value)" oninput="updateBrightnessLabel(this.value)">
+                           onmousedown="window.isDraggingBrightness=true" onmouseup="window.isDraggingBrightness=false"
+                           ontouchstart="window.isDraggingBrightness=true" ontouchend="window.isDraggingBrightness=false"
+                           onchange="window.isDraggingBrightness=false; changeBrightness(this.value);" oninput="updateBrightnessLabel(this.value)">
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                         <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(0)">🌑 ปิดไฟ 0%</button>
                         <button class="btn-opt" style="padding: 6px 2px; font-size: 11px;" onclick="setBrightnessPreset(2500)">🌙 หรี่ 25%</button>
@@ -1395,10 +1397,19 @@
                     }
                 }
 
-                // 7. Update Home Curve Chart from SQLite
+                // 7. Sync LED Brightness
+                if (data.ac_state && data.ac_state.led_brightness !== undefined) {
+                    const bSlider = document.getElementById('brightnessSlider');
+                    if (bSlider && !window.isDraggingBrightness) {
+                        bSlider.value = data.ac_state.led_brightness;
+                        updateBrightnessLabel(data.ac_state.led_brightness);
+                    }
+                }
+
+                // 8. Update Home Curve Chart from SQLite
                 updateHomeCurve();
 
-                // 8. If Analytics Drawer is open, refresh active tab
+                // 9. If Analytics Drawer is open, refresh active tab
                 const anDrawer = document.getElementById('drawerAnalytics');
                 if (anDrawer && anDrawer.classList.contains('open')) {
                     if (currentAnalyticsTab === 'history') fetchAnalyticsMetrics();
