@@ -193,8 +193,24 @@ AMBI_READY_EVENT = threading.Event()
 AMBI_AUTO_RETARGETED = False
 AMBI_PORT_8070_LOCK = threading.Lock()
 
+def get_cached_ambi_ip():
+    cache_file = os.path.join(DIR, "ambi_ip.txt")
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                ip = f.read().strip()
+                if ip and ip.startswith("192.168."):
+                    return ip
+        except Exception:
+            pass
+    return None
+
 def get_ambi_ip():
     global AMBI_IP
+    if not AMBI_IP:
+        cached = get_cached_ambi_ip()
+        if cached:
+            AMBI_IP = cached
     return AMBI_IP
 
 def update_ambi_ip(new_ip, source=""):
@@ -329,17 +345,6 @@ def fetch_ambi_system_log(target_ip=None, timeout=7.0):
             hub_log(f"[-] Error fetching system log from {ip}: {e}")
             return f"Error connecting to Ambi on {ip}:8070 -> {e}"
 
-def get_cached_ambi_ip():
-    cache_file = os.path.join(DIR, "ambi_ip.txt")
-    if os.path.exists(cache_file):
-        try:
-            with open(cache_file, "r", encoding="utf-8") as f:
-                ip = f.read().strip()
-                if ip.startswith("192.168."):
-                    return ip
-        except Exception:
-            pass
-    return "192.168.1.156"
 
 def set_ambi_led_green(target_ip=None, brightness=5730):
     """
@@ -745,34 +750,63 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
         AC_STATE['power'] = str(power)
 
     is_power = str(AC_STATE['power']).lower() != 'off'
-    target_ip = get_ambi_ip()
+    target_ip = get_ambi_ip() or get_cached_ambi_ip()
+    if not target_ip:
+        from test_daikin import discover_ambi_ip
+        target_ip = discover_ambi_ip()
+        if target_ip:
+            update_ambi_ip(target_ip, source="Auto-Discovery")
+
     if not target_ip:
         hub_log(f"[IR TRANSMIT SKIPPED] ({reason}) Ambi IP not yet acquired.")
         return "Ambi IP not yet acquired"
+
     ir_resp = ""
     s = None
-    try:
-        f1, f2 = daikin_ir.build_daikin_command(
-            temp=AC_STATE['temperature'],
-            mode=AC_STATE['mode'],
-            fan=AC_STATE['fan'],
-            power=is_power,
-            protocol_type="B"
-        )
-        cmd = daikin_ir.frames_to_sendir(f1, f2, connector="1:1")
-        s = socket.create_connection((target_ip, 4998), timeout=3.0)
-        s.sendall(cmd.encode('ascii'))
-        ir_resp = s.recv(256).decode('ascii', errors='ignore').strip()
-        hub_log(f"[IR TRANSMIT DAIKIN] ({reason}) Target={AC_STATE['temperature']}°C Fan={AC_STATE['fan']} Power={AC_STATE['power']} -> {ir_resp}")
-    except Exception as e:
-        ir_resp = f"Error: {e}"
-        hub_log(f"[IR TRANSMIT ERROR] ({reason}) {e}")
-    finally:
-        if s:
-            try:
-                s.close()
-            except Exception:
-                pass
+    f1, f2 = daikin_ir.build_daikin_command(
+        temp=AC_STATE['temperature'],
+        mode=AC_STATE['mode'],
+        fan=AC_STATE['fan'],
+        power=is_power,
+        protocol_type="B"
+    )
+    cmd = daikin_ir.frames_to_sendir(f1, f2, connector="1:1")
+
+    # Connect with auto-retry and re-discovery if refused/timed out
+    for attempt in range(2):
+        try:
+            s = socket.create_connection((target_ip, 4998), timeout=3.0)
+            s.sendall(cmd.encode('ascii'))
+            ir_resp = s.recv(256).decode('ascii', errors='ignore').strip()
+            hub_log(f"[IR TRANSMIT DAIKIN] ({reason}) [Target {target_ip}:4998] Target={AC_STATE['temperature']}°C Fan={AC_STATE['fan']} Power={AC_STATE['power']} -> {ir_resp}")
+            break
+        except Exception as e:
+            ir_resp = f"Error: {e}"
+            if s:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+                s = None
+
+            if attempt == 0:
+                hub_log(f"[IR RETRY] ({reason}) Connect to {target_ip}:4998 failed ({e}). Re-discovering Ambi IP...")
+                from test_daikin import discover_ambi_ip
+                fresh_ip = discover_ambi_ip()
+                if fresh_ip and fresh_ip != target_ip:
+                    hub_log(f"[IR RETRY] Detected Ambi IP moved to: {fresh_ip} (was {target_ip})")
+                    target_ip = fresh_ip
+                    update_ambi_ip(fresh_ip, source="Re-Discovery on Refuse")
+                time.sleep(0.4)
+            else:
+                hub_log(f"[IR TRANSMIT ERROR] ({reason}) Target {target_ip}:4998 -> {e}")
+        finally:
+            if s:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+                s = None
 
     # Record event in history
     entry = {
