@@ -217,6 +217,12 @@ def update_ambi_ip(new_ip, source=""):
     global AMBI_IP
     if not new_ip or new_ip in (HOST_IP, ROUTER_WAN_IP, ROUTER_GATEWAY_IP, "127.0.0.1"):
         return
+    # Guard: Verify target is a genuine responsive Ambi Climate device before locking it!
+    # Prevents third-party devices (AV receivers, other AMX hardware) from hijacking the IP.
+    if not is_valid_ambi(new_ip, timeout=0.6):
+        hub_log(f"[-] Ignored non-Ambi IP {new_ip} from {source} (Ports 8070/4998 closed).")
+        return
+
     if new_ip != AMBI_IP and new_ip.startswith("192.168."):
         old_ip = AMBI_IP
         AMBI_IP = new_ip
@@ -568,8 +574,11 @@ def run_beacon_listener():
         while True:
             data, addr = sock.recvfrom(2048)
             text = data.decode('latin1', errors='ignore')
-            if "AMXB" in text or "GlobalCache" in text:
-                update_ambi_ip(addr[0], source="AMX Beacon UDP 9131")
+            # Check specifically for Global Caché AMX beacon or valid Ambi device
+            if "GlobalCache" in text or "ITACH" in text.upper():
+                update_ambi_ip(addr[0], source="GlobalCache AMX Beacon UDP 9131")
+            elif "AMXB" in text and is_valid_ambi(addr[0], timeout=0.4):
+                update_ambi_ip(addr[0], source="Ambi AMX Beacon UDP 9131")
     except Exception:
         pass
 

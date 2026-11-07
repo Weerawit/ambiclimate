@@ -312,6 +312,27 @@ def save_comfort_profile(profile, db_path=None):
         finally:
             conn.close()
 
+def parse_luminosity(val):
+    """Safely parses luminosity value which can be int, float, or raw string like '0 94 67'."""
+    if val is None:
+        return 0
+    if isinstance(val, (int, float)):
+        return int(val)
+    if isinstance(val, str):
+        val = val.strip()
+        if not val:
+            return 0
+        parts = val.split()
+        int_vals = []
+        for p in parts:
+            try:
+                int_vals.append(int(float(p)))
+            except Exception:
+                pass
+        if int_vals:
+            return max(int_vals)
+    return 0
+
 def record_sensor(temperature, humidity, luminosity=0, humidex=None, comfort_score=None, comfort_label=None, source="poll", db_path=None):
     """
     Records a live sensor reading into the database.
@@ -339,7 +360,7 @@ def record_sensor(temperature, humidity, luminosity=0, humidex=None, comfort_sco
                     INSERT INTO sensor_telemetry 
                     (timestamp, datetime_str, temperature, humidity, luminosity, humidex, comfort_score, comfort_label, source)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (now, dt_str, round(temperature, 2), round(humidity, 2), int(luminosity or 0),
+                """, (now, dt_str, round(temperature, 2), round(humidity, 2), parse_luminosity(luminosity),
                       round(humidex, 2) if humidex is not None else None,
                       round(comfort_score, 2) if comfort_score is not None else None,
                       comfort_label, source))
