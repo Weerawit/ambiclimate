@@ -653,22 +653,34 @@ def format_relative_time_th(ts):
         days = diff // 86400
         return f"เมื่อ {days} วันที่แล้ว"
 
-def get_timeline(limit=50, db_path=None):
+def get_timeline(limit=50, hours=None, db_path=None):
     """
     Retrieves recent AC actions formatted as timeline items matching Ambi Climate app style.
+    Optional hours parameter filters actions within the last X hours.
     """
     path = get_db_path(db_path)
     with _DB_LOCK:
         conn = get_connection(path)
         try:
             cur = conn.cursor()
-            cur.execute("""
-                SELECT id, timestamp, datetime_str, action_type, power, temperature,
-                       fan, swing, mode, trigger_reason, room_temp, room_humidity, humidex, result, details
-                FROM ac_actions
-                ORDER BY timestamp DESC
-                LIMIT ?
-            """, (limit,))
+            if hours and hours > 0:
+                start_ts = time.time() - (hours * 3600)
+                cur.execute("""
+                    SELECT id, timestamp, datetime_str, action_type, power, temperature,
+                           fan, swing, mode, trigger_reason, room_temp, room_humidity, humidex, result, details
+                    FROM ac_actions
+                    WHERE timestamp >= ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (start_ts, limit))
+            else:
+                cur.execute("""
+                    SELECT id, timestamp, datetime_str, action_type, power, temperature,
+                           fan, swing, mode, trigger_reason, room_temp, room_humidity, humidex, result, details
+                    FROM ac_actions
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (limit,))
             rows = cur.fetchall()
         finally:
             conn.close()

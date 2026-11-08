@@ -2228,12 +2228,26 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK" if ok else "Error", "level": lvl, "device_ip": get_ambi_ip()}).encode('utf-8'))
             return
 
-        # 12. SQLite Metrics History API (For Graphs - 4h, 24h, 7d)
+        # 12. SQLite Metrics History API (For Graphs - 1h, 4h, 8h, 12h, 24h, 7d)
         if path == '/api/history/metrics':
             range_str = query.get('range', ['4h'])[0].lower()
             hours = 4
-            if range_str == '24h':
+            if range_str.endswith('h'):
+                try:
+                    hours = int(range_str[:-1])
+                except ValueError:
+                    hours = 4
+            elif range_str.endswith('d'):
+                try:
+                    hours = int(range_str[:-1]) * 24
+                except ValueError:
+                    hours = 168
+            elif range_str == '24h':
                 hours = 24
+            elif range_str == '12h':
+                hours = 12
+            elif range_str == '8h':
+                hours = 8
             elif range_str == '7d':
                 hours = 168
             elif range_str == '1h':
@@ -2245,17 +2259,30 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "OK", "data": metrics}).encode('utf-8'))
             return
 
-        # 13. SQLite Activity Timeline API (Deployments / Actions History)
+        # 13. SQLite Activity Timeline API (Deployments / Actions History with range & limit)
         if path == '/api/history/timeline':
             try:
-                limit = int(query.get('limit', ['50'])[0])
+                limit = int(query.get('limit', ['100'])[0])
             except (ValueError, TypeError):
-                limit = 50
-            events = ambi_db.get_timeline(limit=limit)
+                limit = 100
+            range_str = query.get('range', [''])[0].lower()
+            hours = None
+            if range_str:
+                if range_str.endswith('h'):
+                    try:
+                        hours = int(range_str[:-1])
+                    except ValueError:
+                        hours = None
+                elif range_str.endswith('d'):
+                    try:
+                        hours = int(range_str[:-1]) * 24
+                    except ValueError:
+                        hours = None
+            events = ambi_db.get_timeline(limit=limit, hours=hours)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "OK", "events": events}).encode('utf-8'))
+            self.wfile.write(json.dumps({"status": "OK", "events": events, "hours": hours}).encode('utf-8'))
             return
 
         # 14. Physical Remote State Sync API (Sync AC Power On/Off without blasting IR)
