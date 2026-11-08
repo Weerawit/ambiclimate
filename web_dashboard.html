@@ -2570,7 +2570,7 @@
 
             // Update Filter Chip counts
             const aiCount = rawEvents.filter(e => e.is_ai || e.category === 'ai').length;
-            const manualCount = rawEvents.filter(e => e.category === 'manual').length;
+            const manualCount = rawEvents.filter(e => e.category === 'manual' || e.category === 'power').length;
             const modeCount = rawEvents.filter(e => e.category === 'mode').length;
             const feedbackCount = rawEvents.filter(e => e.category === 'feedback').length;
 
@@ -2583,7 +2583,7 @@
             const filteredEvents = rawEvents.filter(ev => {
                 if (activeEventFilter === 'all') return true;
                 if (activeEventFilter === 'ai') return ev.is_ai || ev.category === 'ai';
-                if (activeEventFilter === 'manual') return ev.category === 'manual';
+                if (activeEventFilter === 'manual') return ev.category === 'manual' || ev.category === 'power';
                 if (activeEventFilter === 'mode') return ev.category === 'mode';
                 if (activeEventFilter === 'feedback') return ev.category === 'feedback';
                 return true;
