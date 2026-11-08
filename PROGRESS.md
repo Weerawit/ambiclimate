@@ -990,6 +990,33 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * **Sensor Polling Duration Optimization:**
      * ปรับ `get_live_sensors(full_info=False)` ให้ดึงเฉพาะเซนเซอร์จำเป็น (`NTP`, `NHM`, `NLU`) ลดระยะเวลาการถือครอง Socket ลงจาก ~1.6 วินาที เหลือเพียง ~0.35 วินาที
 
+---
+
+### 31. ระบบแสดง Event บนกราฟสภาพอากาศ & ยกระดับหน้า Dashboard สไตล์วิศวกรรมระดับโปร (Anti-slop, figma.com / x.ai level) [2026-11-08]
+1. **Event Annotations บนกราฟสภาพอากาศ (Interactive & Mini-Curve):**
+   * **Database Query (`ambi_db.py`):**
+     * อัปเกรดฟังก์ชัน `get_sensor_metrics(hours)` ให้ดึงประวัติการสั่งงานจากตาราง `ac_actions` ตามช่วงเวลาที่ผู้ใช้เลือก (1h, 4h, 12h, 24h, 7d)
+     * จำแนกหมวดหมู่อัตโนมัติเป็น 4 ประเภท:
+       - `ai_adjust` (🤖 AI Adjust): สั่งปรับอุณหภูมิ/พัดลมอัตโนมัติด้วย AI Rule Engine / Comfort Model
+       - `manual_remote` (👤 รีโมทจริง / ผู้ใช้ปรับเอง): ตรวจพบการกดรีโมทจริงทาง IR Sniffer หรือกดสั่งผ่าน UI
+       - `mode_change` (⚡ เปลี่ยนโหมด): เปิด/ปิด หรือสลับโหมดการทำงาน (Comfort, Away, Manual, Off)
+       - `feedback` (😊 สอน AI): บันทึกความคิดเห็นสภาพความสบายจากผู้ใช้
+     * รวมข้อมูลบริบทขณะสั่งงาน: อุณหภูมิห้อง, ความชื้น, ดัชนี Humidex, สาเหตุ (`trigger_reason`), และสถานะการยิง IR (`result`)
+   * **SVG Event Pins & Markers (`web_dashboard.html`):**
+     * บนกราฟสภาพอากาศหลัก: วาดเส้นแนวตั้ง (Timeline dashed guide) และ Pin Badge วงกลมระบุไอคอนและสีประจำประเภท ณ จุดเวลาที่เกิด Action
+     * บนกราฟมินิด้านหน้าห้อง (Home Curve): วาดขีด Event Tick ด้านล่าง พร้อมทำให้กดเพื่อเปิดดู Analytics ฉบับเต็มได้ทันที
+   * **Event Filter Bar & Interactive Action Stream:**
+     * แถบกรอง Event ด้านบนกราฟ: ผู้ใช้สามารถเลือกฟิลเตอร์เฉพาะเหตุการณ์ที่สนใจ เช่น ดูเฉพาะที่ AI ทำงาน หรือดูเฉพาะตอนที่คนกดรีโมท
+     * Live Action Stream Ticker ด้านล่างกราฟ: แสดงรายการเหตุการณ์ล่าสุดแบบ Timeline เมื่อคลิกจะเลื่อนและโฟกัสหมุดบนกราฟพร้อม Tooltip ทันที
+     * Rich Tooltip: โฮเวอร์หรือแตะที่หมุดเพื่อดูรายละเอียดเชิงลึก เช่น "AI ปรับแอร์เป็น 26°C (Fan: AUTO) เนื่องจาก Humidex 30.5°C เกินจุดสบาย"
+
+2. **ยกระดับ Frontend/Dashboard ด้วยหลักการ Anti-slop ระดับพรีเมียม (figma.com / x.ai standard):**
+   * ติดตั้งและประยุกต์ใช้มาตรฐาน `taste-skill` v2.5.1
+   * ปลดล็อก Responsive Layout: บนหน้าจอคอมพิวเตอร์/แท็บเล็ต (`min-width: 960px`) ขยายจากกล่องแคบ 440px สู่ Bento Engineering Grid กว้างขวาง สง่างาม แสดงกราฟและข้อมูลได้อย่างเต็มตา
+   * ระบบฟอนต์ Tabular Numerals (`font-variant-numeric: tabular-nums`) ทำให้อุณหภูมิและตัวเลขอ่านง่าย ไม่ขยับสั่นไหวเมื่อค่าเปลี่ยน
+   * ลดทอนลูกเล่น AI แสงฟุ้งหลอกตา (No generic AI gradient slop) ใช้เส้นสายคมชัด Micro-interactions ที่นุ่มนวล และ Hierarchy ทางสายตาที่ชัดเจน
+
+
 
 
 

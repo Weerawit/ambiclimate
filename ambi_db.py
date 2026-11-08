@@ -478,8 +478,93 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
                 ORDER BY timestamp ASC
             """, (start_ts,))
             rows = cur.fetchall()
+
+            cur.execute("""
+                SELECT id, timestamp, datetime_str, action_type, power, temperature,
+                       fan, swing, mode, trigger_reason, room_temp, room_humidity, humidex, result, details
+                FROM ac_actions
+                WHERE timestamp >= ?
+                ORDER BY timestamp ASC
+            """, (start_ts,))
+            action_rows = cur.fetchall()
         finally:
             conn.close()
+
+    events = []
+    for a in action_rows:
+        act_type = (a["action_type"] or "manual_control").lower()
+        reason = a["trigger_reason"] or ""
+        reason_lower = reason.lower()
+        is_ai = any(k in act_type for k in ("ai", "auto")) or any(k in reason_lower for k in ("ai", "auto-tune", "auto-tuning", "comfort ai"))
+
+        # Category, icon, badge label & color
+        if is_ai or act_type == "ai_tune":
+            category = "ai"
+            badge_label = "AI Adjust"
+            icon = "🤖"
+            color = "#10b981"
+        elif "feedback" in act_type or "feedback" in reason_lower:
+            category = "feedback"
+            badge_label = "User Feedback"
+            icon = "😊"
+            color = "#f59e0b"
+        elif "mode" in act_type or "mode" in reason_lower:
+            category = "mode"
+            badge_label = "Mode Change"
+            icon = "⚡"
+            color = "#a855f7"
+        elif "recovery" in act_type or "recovery" in reason_lower:
+            category = "recovery"
+            badge_label = "Auto Retry"
+            icon = "🔄"
+            color = "#38bdf8"
+        elif act_type == "power" or "power" in reason_lower:
+            category = "power"
+            is_off = str(a["power"]).lower() == "off"
+            badge_label = "Power OFF" if is_off else "Power ON"
+            icon = "🔌"
+            color = "#ef4444" if is_off else "#10b981"
+        else:
+            category = "manual"
+            badge_label = "Manual Remote"
+            icon = "👤"
+            color = "#3b82f6"
+
+        t_val = a["temperature"]
+        f_val = a["fan"]
+        p_val = a["power"]
+        mode_val = a["mode"] or "Cool"
+
+        if str(p_val).lower() == 'off':
+            summary = "ปิดแอร์ (OFF)"
+        elif t_val:
+            summary = f"{t_val}°C • {f_val or 'Auto'}"
+        else:
+            summary = f"{p_val or 'On'}"
+
+        dt = datetime.datetime.fromtimestamp(a["timestamp"])
+        events.append({
+            "id": a["id"],
+            "timestamp": a["timestamp"],
+            "time_str": dt.strftime('%H:%M'),
+            "datetime_str": a["datetime_str"],
+            "category": category,
+            "is_ai": is_ai,
+            "icon": icon,
+            "badge_label": badge_label,
+            "color": color,
+            "action_type": act_type,
+            "power": p_val,
+            "temperature": t_val,
+            "fan": f_val,
+            "mode": mode_val,
+            "summary": summary,
+            "trigger_reason": reason,
+            "room_temp": a["room_temp"],
+            "room_humidity": a["room_humidity"],
+            "humidex": a["humidex"],
+            "result": a["result"]
+        })
 
     if not rows:
         return {
@@ -488,6 +573,7 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
             "start_timestamp": start_ts,
             "end_timestamp": now,
             "points": [],
+            "events": events,
             "stats": {
                 "min_temp": None, "max_temp": None, "avg_temp": None,
                 "min_hum": None, "max_hum": None, "avg_hum": None,
@@ -547,6 +633,7 @@ def get_sensor_metrics(hours=4, max_points=120, db_path=None):
         "start_timestamp": start_ts,
         "end_timestamp": now,
         "points": points,
+        "events": events,
         "stats": stats
     }
 

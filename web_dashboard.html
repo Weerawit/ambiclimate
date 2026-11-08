@@ -816,6 +816,178 @@
             z-index: 20;
             line-height: 1.4;
             font-variant-numeric: tabular-nums;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Event Filter Bar & Pins */
+        .event-filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-hairline);
+        }
+        .event-filter-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .event-filter-chips {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .ev-filter-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-hairline);
+            color: var(--text-secondary);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .ev-filter-chip:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+        .ev-filter-chip.active {
+            background: rgba(0, 184, 169, 0.18);
+            border-color: rgba(0, 184, 169, 0.45);
+            color: #2dd4bf;
+            font-weight: 600;
+        }
+        .chart-event-pin {
+            transition: transform 0.15s ease;
+        }
+        .chart-event-pin:hover {
+            transform: scale(1.25);
+        }
+
+        /* Event Action Stream */
+        .chart-event-stream {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-hairline);
+        }
+        .event-stream-header {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .event-stream-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 130px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+        .event-stream-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border-hairline);
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .event-stream-chip:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateX(2px);
+        }
+        .chip-icon {
+            font-size: 11px;
+        }
+        .chip-time {
+            color: var(--text-muted);
+            font-family: monospace;
+            font-size: 10px;
+        }
+        .chip-badge {
+            font-size: 10px;
+        }
+        .chip-action {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .chip-reason {
+            color: var(--text-secondary);
+            font-size: 9.5px;
+            margin-left: auto;
+            text-align: right;
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Pro Responsive Layout (figma.com / x.ai level) */
+        @media (min-width: 960px) {
+            body {
+                background-color: #07090e;
+                padding: 24px;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+            }
+            .app-frame {
+                max-width: 1120px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.75);
+                background-color: var(--surface-bg);
+            }
+            .top-nav {
+                border-top-left-radius: 20px;
+                border-top-right-radius: 20px;
+                padding: 18px 28px;
+            }
+            .chart-section {
+                padding: 18px 28px;
+            }
+            .chart-container {
+                height: 120px;
+            }
+            .dial-section {
+                padding: 36px 20px;
+            }
+            .dial-bubble {
+                width: 260px;
+                height: 260px;
+            }
+            .quick-feedback-bar {
+                margin: 0 28px 24px;
+                width: calc(100% - 56px);
+                padding: 14px 20px;
+            }
+            .bottom-nav {
+                border-bottom-left-radius: 20px;
+                border-bottom-right-radius: 20px;
+                padding: 14px 28px;
+            }
+            .drawer-content {
+                max-width: 680px;
+                border-radius: 20px;
+                margin: auto;
+                box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.9);
+            }
+            .drawer-overlay {
+                align-items: center;
+                justify-content: center;
+                background-color: rgba(7, 9, 14, 0.75);
+                backdrop-filter: blur(8px);
+            }
         }
 
         /* Timeline View */
@@ -1003,10 +1175,10 @@
         </div>
 
         <!-- 4-Hour Climate Curve Chart -->
-        <div class="chart-section">
+        <div class="chart-section" onclick="openDrawer('drawerAnalytics')" style="cursor: pointer;" title="คลิกเพื่อดูกราฟวิเคราะห์และเหตุการณ์ (Events) ฉบับเต็ม">
             <div class="chart-header">
                 <span id="chartHighHum">H 57.2%</span>
-                <span id="chartStatusText">ประวัติสภาพอากาศ 4 ชม.</span>
+                <span id="chartStatusText">ประวัติสภาพอากาศ 4 ชม. (แตะเพื่อดูกราฟและ Events)</span>
                 <span id="chartLowHum">L 45.0%</span>
             </div>
             <div class="chart-container">
@@ -1022,6 +1194,8 @@
                     <path id="curveHum" d="M0,45 Q100,28 200,52 T400,36" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/>
                     <!-- Temperature Line -->
                     <path id="curveTemp" d="M0,64 Q100,58 200,40 T400,48" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round"/>
+                    <!-- Event vertical marker ticks -->
+                    <g id="homeCurveEvents"></g>
                     <!-- Live marker dots -->
                     <circle id="dotHum" cx="400" cy="36" r="3" fill="#38bdf8"/>
                     <circle id="dotTemp" cx="400" cy="48" r="3" fill="#f87171"/>
@@ -1617,8 +1791,20 @@
                         </div>
                     </div>
 
-                    <!-- Interactive Chart Box -->
+                    <!-- Interactive Chart Box with Event Markers -->
                     <div class="chart-box-card">
+                        <!-- Event Filter Row -->
+                        <div class="event-filter-row">
+                            <span class="event-filter-label">⚡ เหตุการณ์ในกราฟ (Events):</span>
+                            <div class="event-filter-chips">
+                                <button class="ev-filter-chip active" id="evFilterAll" data-filter="all" onclick="setEventFilter('all')">ทั้งหมด</button>
+                                <button class="ev-filter-chip" id="evFilterAi" data-filter="ai" onclick="setEventFilter('ai')">🤖 AI Adjust</button>
+                                <button class="ev-filter-chip" id="evFilterMan" data-filter="manual" onclick="setEventFilter('manual')">👤 Manual</button>
+                                <button class="ev-filter-chip" id="evFilterMode" data-filter="mode" onclick="setEventFilter('mode')">⚡ Mode</button>
+                                <button class="ev-filter-chip" id="evFilterFb" data-filter="feedback" onclick="setEventFilter('feedback')">😊 สอน AI</button>
+                            </div>
+                        </div>
+
                         <div id="chartTooltip" class="chart-tooltip-box"></div>
                         <svg id="interactiveChartSvg" class="chart-svg-interactive" viewBox="0 0 440 170" preserveAspectRatio="none">
                             <!-- Dynamically populated via JS -->
@@ -1632,7 +1818,18 @@
                                 <span class="chart-legend-dot" style="background-color: var(--hum-cyan);"></span>
                                 <span>ความชื้น (%)</span>
                             </div>
+                            <div class="chart-legend-item">
+                                <span class="chart-legend-dot" style="background-color: #10b981;"></span>
+                                <span>🤖 AI Adjust</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <span class="chart-legend-dot" style="background-color: #3b82f6;"></span>
+                                <span>👤 Manual</span>
+                            </div>
                         </div>
+
+                        <!-- Live Event Action Stream -->
+                        <div class="chart-event-stream" id="chartEventStream"></div>
                     </div>
                 </div>
 
@@ -2240,14 +2437,77 @@
                     dotHum.setAttribute('cx', humCoords[humCoords.length - 1].x.toFixed(1));
                     dotHum.setAttribute('cy', humCoords[humCoords.length - 1].y.toFixed(1));
                 }
+
+                // Render event markers on home mini-curve
+                const elEvents = document.getElementById('homeCurveEvents');
+                if (elEvents && json.data.events) {
+                    let evHtml = '';
+                    json.data.events.forEach(ev => {
+                        const timeRatio = Math.max(0, Math.min(1, (ev.timestamp - startTs) / timeSpan));
+                        const ex = padX + timeRatio * drawW;
+                        evHtml += `
+                            <line x1="${ex.toFixed(1)}" y1="${padY}" x2="${ex.toFixed(1)}" y2="${height - padY}" stroke="${ev.color}" stroke-opacity="0.45" stroke-dasharray="2,2"/>
+                            <circle cx="${ex.toFixed(1)}" cy="11" r="3.5" fill="${ev.color}" stroke="#141415" stroke-width="1">
+                                <title>${ev.time_str} - ${ev.badge_label}: ${ev.summary}</title>
+                            </circle>
+                        `;
+                    });
+                    elEvents.innerHTML = evHtml;
+                }
             } catch (e) {
                 console.warn("Home curve update error:", e);
             }
         }
 
-        // Analytics Drawer
+        // Analytics Drawer & Event Filter
         let currentAnalyticsTab = 'history';
         let currentAnalyticsRange = '4h';
+        let activeEventFilter = 'all';
+        let lastChartMetricsData = null;
+
+        function setEventFilter(filter) {
+            activeEventFilter = filter;
+            document.querySelectorAll('.ev-filter-chip').forEach(c => {
+                c.classList.toggle('active', c.getAttribute('data-filter') === filter);
+            });
+            if (lastChartMetricsData) {
+                renderInteractiveChart(lastChartMetricsData);
+            }
+        }
+
+        function highlightChartEvent(eventId) {
+            const pin = document.querySelector(`.chart-event-pin[data-ev-id="${eventId}"]`);
+            if (pin && lastChartMetricsData) {
+                const ev = (lastChartMetricsData.events || []).find(e => e.id === eventId);
+                if (ev) {
+                    const tooltip = document.getElementById('chartTooltip');
+                    if (tooltip) {
+                        tooltip.style.display = 'block';
+                        tooltip.innerHTML = formatEventTooltipHtml(ev);
+                    }
+                }
+            }
+        }
+
+        function formatEventTooltipHtml(ev) {
+            return `
+                <div style="font-size: 11px; line-height: 1.4; min-width: 190px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: 600; color: ${ev.color}; display: flex; align-items: center; gap: 4px;">
+                            <span>${ev.icon}</span> <span>${ev.badge_label}</span>
+                        </span>
+                        <span style="color: var(--text-muted); font-size: 10px; font-family: monospace;">${ev.datetime_str ? ev.datetime_str.split(' ')[1] : ev.time_str}</span>
+                    </div>
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: 3px;">${ev.summary}</div>
+                    ${ev.trigger_reason ? `<div style="color: var(--text-secondary); font-size: 10px; margin-bottom: 5px; background: rgba(255,255,255,0.05); padding: 4px 6px; border-radius: 4px; line-height: 1.3;">${ev.trigger_reason}</div>` : ''}
+                    <div style="font-size: 10px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; margin-top: 4px; display: flex; justify-content: space-between;">
+                        <span>ห้อง: ${ev.room_temp || '--'}°C • ${ev.room_humidity || '--'}%</span>
+                        <span style="color: #4cc38a;">Hx: ${ev.humidex || '--'}°C</span>
+                    </div>
+                    ${ev.result ? `<div style="font-size: 9px; color: ${ev.result.includes('completeir') ? '#4cc38a' : '#f87171'}; margin-top: 2px;">IR: ${ev.result}</div>` : ''}
+                </div>
+            `;
+        }
 
         function switchAnalyticsTab(tab) {
             currentAnalyticsTab = tab;
@@ -2297,6 +2557,7 @@
         }
 
         function renderInteractiveChart(data) {
+            lastChartMetricsData = data;
             const svg = document.getElementById('interactiveChartSvg');
             if (!svg) return;
             const pts = data.points;
@@ -2304,6 +2565,29 @@
                 svg.innerHTML = '<text x="220" y="85" text-anchor="middle" fill="var(--text-muted)" font-size="11">ยังไม่มีข้อมูลสภาพอากาศสำหรับช่วงเวลานี้</text>';
                 return;
             }
+
+            const rawEvents = data.events || [];
+
+            // Update Filter Chip counts
+            const aiCount = rawEvents.filter(e => e.is_ai || e.category === 'ai').length;
+            const manualCount = rawEvents.filter(e => e.category === 'manual').length;
+            const modeCount = rawEvents.filter(e => e.category === 'mode').length;
+            const feedbackCount = rawEvents.filter(e => e.category === 'feedback').length;
+
+            const cAll = document.getElementById('evFilterAll'); if (cAll) cAll.innerText = `ทั้งหมด (${rawEvents.length})`;
+            const cAi = document.getElementById('evFilterAi'); if (cAi) cAi.innerText = `🤖 AI (${aiCount})`;
+            const cMan = document.getElementById('evFilterMan'); if (cMan) cMan.innerText = `👤 Manual (${manualCount})`;
+            const cMode = document.getElementById('evFilterMode'); if (cMode) cMode.innerText = `⚡ Mode (${modeCount})`;
+            const cFb = document.getElementById('evFilterFb'); if (cFb) cFb.innerText = `😊 สอน AI (${feedbackCount})`;
+
+            const filteredEvents = rawEvents.filter(ev => {
+                if (activeEventFilter === 'all') return true;
+                if (activeEventFilter === 'ai') return ev.is_ai || ev.category === 'ai';
+                if (activeEventFilter === 'manual') return ev.category === 'manual';
+                if (activeEventFilter === 'mode') return ev.category === 'mode';
+                if (activeEventFilter === 'feedback') return ev.category === 'feedback';
+                return true;
+            });
 
             const width = 440;
             const height = 170;
@@ -2350,6 +2634,25 @@
             const gridYTop = padT;
             const gridYBot = padT + drawH;
 
+            // Build Events markup
+            let eventsSvg = '';
+            filteredEvents.forEach(ev => {
+                const timeRatio = Math.max(0, Math.min(1, (ev.timestamp - startTs) / timeSpan));
+                const ex = padL + timeRatio * drawW;
+                if (ex < padL || ex > padL + drawW) return;
+
+                eventsSvg += `
+                    <!-- Event Vertical Guide -->
+                    <line class="event-marker-line" x1="${ex.toFixed(1)}" y1="${padT}" x2="${ex.toFixed(1)}" y2="${padT + drawH}" 
+                          stroke="${ev.color}" stroke-opacity="0.45" stroke-dasharray="2,2" stroke-width="1.2"/>
+                    <!-- Event Pin -->
+                    <g class="chart-event-pin" data-ev-id="${ev.id}" transform="translate(${ex.toFixed(1)}, ${padT + 8})" style="cursor: pointer;">
+                        <circle cx="0" cy="0" r="7.5" fill="#0b0f17" stroke="${ev.color}" stroke-width="1.4"/>
+                        <text x="0" y="3" text-anchor="middle" font-size="8" fill="${ev.color}">${ev.icon}</text>
+                    </g>
+                `;
+            });
+
             let html = `
                 <defs>
                     <linearGradient id="anHumGrad" x1="0" y1="0" x2="0" y2="1">
@@ -2380,6 +2683,9 @@
                 <!-- Temperature Line -->
                 <path d="${tempPathD}" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round"/>
 
+                <!-- Events Layer -->
+                ${eventsSvg}
+
                 <!-- End dots -->
                 <circle cx="${tempCoords[tempCoords.length - 1].x.toFixed(1)}" cy="${tempCoords[tempCoords.length - 1].y.toFixed(1)}" r="3" fill="#f87171"/>
                 <circle cx="${humCoords[humCoords.length - 1].x.toFixed(1)}" cy="${humCoords[humCoords.length - 1].y.toFixed(1)}" r="3" fill="#38bdf8"/>
@@ -2403,11 +2709,48 @@
 
             svg.innerHTML = html;
 
+            // Populate Event Action Stream
+            const streamElem = document.getElementById('chartEventStream');
+            if (streamElem) {
+                if (filteredEvents.length === 0) {
+                    streamElem.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 10px 0;">ไม่มีเหตุการณ์สำหรับตัวกรองนี้</div>`;
+                } else {
+                    streamElem.innerHTML = `
+                        <div class="event-stream-header">
+                            <span>⚡ เหตุการณ์ (${filteredEvents.length} รายการ):</span>
+                        </div>
+                        <div class="event-stream-list">
+                            ${filteredEvents.slice().reverse().map(ev => `
+                                <div class="event-stream-chip" onclick="highlightChartEvent(${ev.id})" style="border-left: 3px solid ${ev.color};">
+                                    <span class="chip-icon">${ev.icon}</span>
+                                    <span class="chip-time">${ev.time_str}</span>
+                                    <span class="chip-badge" style="color: ${ev.color}; font-weight: 600;">${ev.badge_label}</span>
+                                    <span class="chip-action">${ev.summary}</span>
+                                    <span class="chip-reason">${ev.trigger_reason ? ev.trigger_reason.substring(0, 36) + (ev.trigger_reason.length > 36 ? '...' : '') : ''}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }
+
             const overlay = document.getElementById('chartInteractiveRect');
             const tooltip = document.getElementById('chartTooltip');
             const cLine = document.getElementById('interactiveCursorLine');
             const cDotT = document.getElementById('interactiveCursorDotT');
             const cDotH = document.getElementById('interactiveCursorDotH');
+
+            // Attach event pin hover
+            svg.querySelectorAll('.chart-event-pin').forEach(pin => {
+                const evId = parseInt(pin.getAttribute('data-ev-id'));
+                const ev = filteredEvents.find(e => e.id === evId);
+                if (!ev) return;
+
+                pin.addEventListener('mouseenter', (e) => {
+                    tooltip.style.display = 'block';
+                    tooltip.innerHTML = formatEventTooltipHtml(ev);
+                });
+            });
 
             function onPointerMove(evt) {
                 const rect = svg.getBoundingClientRect();
