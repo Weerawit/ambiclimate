@@ -1027,6 +1027,41 @@ local1.notice aircom[813]: cloudc: cloud sock error(32) herror (1)
    * `/api/history/timeline`: รองรับพารามิเตอร์ `&range=8h`, `&range=12h` สำหรับ Query เฉพาะช่วงเวลา พร้อม fallback เป็นค่า default เมื่อเลือก "ทั้งหมด"
    * ปรับปรุง CSS `.range-bar` ให้รองรับ `flex-wrap` และขนาดปุ่มที่กะทัดรัด สวยงาม ไม่ล้นจอทั้งบนมือถือและเดสก์ท็อป
 
+---
+
+### 33. เชื่อมต่อระบบเข้ากับ Apple Home & Homebridge บน Raspberry Pi [2026-11-11]
+1. **พัฒนา Native HomeKit Thermostat Endpoints:**
+   * `/status` & `/api/homebridge/status`: คืนค่าสถานะ JSON ตามมาตรฐาน Apple Home (`targetTemperature`, `currentTemperature`, `currentRelativeHumidity`, `targetHeatingCoolingState`, `currentHeatingCoolingState`)
+   * `/targetTemperature?value=X`: สั่งปรับอุณหภูมิเป้าหมายของแอร์ผ่านคำสั่ง IR ไปยังเครื่องจริง
+   * `/targetHeatingCoolingState?value=0|2`: สั่งเปิด/ปิดแอร์ (โหมด Cool หรือ Off) ผ่านสัญญาณ IR Daikin
+2. **รองรับ Feedback ความรู้สึกสอน AI ผ่าน Apple Ecosystem:**
+   * `/api/feedback`: ปรับปรุงให้รองรับทั้งภาษาไทยและอังกฤษ (`choice=cold`, `หนาวไป`, `เย็นไป`, `warm`, `ร้อนไป`, `comfy`, `สบายดี`)
+   * รองรับการทำงานร่วมกับ **Apple Shortcuts** (คำสั่งลัดบน iPhone/iPad/Apple Watch) ให้สั่งงานด้วยเสียงผ่าน Siri ได้เป็นธรรมชาติ เช่น *"หวัดดี Siri แอร์หนาวไป"* หรือทำเป็นวิดเจ็ตบนหน้าจอโฮม
+   * รองรับการสร้างปุ่มแบบ Stateless Push Button บน Apple Home ผ่านปลั๊กอิน `homebridge-http-switch`
+3. **จัดทำคู่มือการติดตั้งและการตั้งค่า:**
+   * อัปเดตไฟล์ `README.md` เพิ่มหมวด **Apple Home / Homebridge Integration** พร้อมตัวอย่าง `config.json` และคำอธิบายพารามิเตอร์ครบถ้วน
+
+---
+
+### 34. ยกเครื่องสถาปัตยกรรมสู่ Model-View-Controller (MVC) & Automated Testing [2026-11-11]
+1. **Refactor Codebase เป็นสถาปัตยกรรม MVC:**
+   * จากเดิมที่ `ambi_hub.py` มีขนาดยาวเกือบ 3,000 บรรทัด ได้ทำการแยกหน้าที่การทำงานอย่างเป็นระบบ ทำให้ `ambi_hub.py` ลดเหลือเพียง **124 บรรทัด** เป็น Main Orchestrator ที่อ่านเข้าใจง่าย
+   * **Models (`models/`):**
+     * `config.py`: สภาพแวดล้อมระบบ, Network Auto-detection (LAN/WAN/Gateway/DNS), Locks & Logging
+     * `ac_state.py`: ข้อมูลสถานะแอร์ (`AC_STATE`), Device Profile, Ambi IP Cache, และคิว Pending IR Recovery
+     * `comfort.py`: สูตร Canadian Humidex, การประเมิน Comfort 7 ระดับ, โหลด/บันทึก Profile ลง SQLite
+   * **Views (`views/`):**
+     * `dashboard_view.py`: จัดการโหลดเทมเพลต `web_dashboard.html` พร้อม Embedded Fallback
+   * **Controllers (`controllers/`):**
+     * `hardware_controller.py`: ควบคุม Ambi Port 8070, ยิง IR Daikin Port 4998, คุมไฟ LED, และดึงค่าเซ็นเซอร์
+     * `api_controller.py`: HTTP Request Handler (`AmbiAPIHandler`) จัดการ REST API และ HomeKit Endpoints
+     * `background_controller.py`: รวม Background Workers ทั้งหมด (DNS 53, Cloud Mock 8866/8867, Beacon 9131, Auto-tuning, Poller, CLI)
+   * **100% Backward Compatibility:** Re-export ทุกสัญลักษณ์หลักผ่าน `ambi_hub.py` ทำให้การรันผ่าน `python ambi_hub.py`, `run_hub.bat` หรือ Docker ทำงานได้เหมือนเดิมโดยไม่ต้องแก้โค้ดภายนอก
+2. **สร้างชุดทดสอบอัตโนมัติ (`test_mvc.py`):**
+   * ครอบคลุมการทดสอบทั้ง 8 หมวด: การโหลดโมเดล, สูตร Humidex, การเรนเดอร์หน้าเว็บ, Homebridge Endpoints, การสั่งงานแอร์, API State, User Feedback, และ Backward Compatibility Re-exports
+   * ผ่านการทดสอบ (8/8 tests passed) 100%
+
+
 
 
 
