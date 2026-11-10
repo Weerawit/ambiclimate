@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Ambi Climate All-in-One Local Hub & Hybrid Comfort AI
 -----------------------------------------------------
@@ -16,6 +17,9 @@ Refactored using Model-View-Controller (MVC) Architecture:
 """
 
 import sys
+if sys.version_info[0] < 3:
+    sys.exit("[-] Error: Python 3 is required. Please run: python3 ambi_hub.py\n")
+
 import os
 import time
 import threading

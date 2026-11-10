@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Ambi Climate MVC Automated Test Suite
 -------------------------------------
@@ -7,6 +8,9 @@ AC state management, HomeKit/Homebridge endpoints, and Web Dashboard rendering.
 """
 
 import sys
+if sys.version_info[0] < 3:
+    sys.exit("[-] Error: Python 3 is required. Please run: python3 test_mvc.py\n")
+
 import os
 import json
 import unittest

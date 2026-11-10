@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Ambi Climate Configuration & Network Auto-Detection Model
 ---------------------------------------------------------
