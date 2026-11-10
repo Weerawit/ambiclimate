@@ -1803,7 +1803,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
         AC_STATE["last_seen"] = time.strftime('%H:%M:%S')
         hub_log(f"[GET :{self.server.server_port}] from {self.client_address[0]} Path: {self.path}")
 
-        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and (self.path == '/' or self.path.startswith('/api')):
+        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and (self.path == '/' or self.path.startswith('/api') or self.path.startswith('/status') or self.path.startswith('/target')):
             self.handle_web_ui()
             return
  
@@ -1833,7 +1833,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         AC_STATE["last_seen"] = time.strftime('%H:%M:%S')
-        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and self.path.startswith('/api'):
+        if (self.server.server_port in (DASHBOARD_PORT, 9090)) and (self.path.startswith('/api') or self.path.startswith('/status') or self.path.startswith('/target')):
             self.handle_web_ui()
             return
         length = int(self.headers.get('Content-Length', 0))
@@ -1892,6 +1892,76 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
+
+        # 0. Homebridge Apple HomeKit Integration Endpoints
+        if path in ('/api/homebridge/status', '/status'):
+            is_off = str(AC_STATE.get("power", "off")).lower() == 'off'
+            mode = str(AC_STATE.get("mode", "cool")).lower()
+
+            # Map mode to HomeKit HeatingCoolingState: 0=Off, 1=Heat, 2=Cool, 3=Auto
+            if is_off:
+                hk_state = 0
+            elif mode == 'heat':
+                hk_state = 1
+            elif mode == 'auto':
+                hk_state = 3
+            else:
+                hk_state = 2  # Cool is default for AC
+
+            current_t = AC_STATE.get("room_temp")
+            current_t = float(current_t) if current_t is not None else float(AC_STATE.get("temperature", 25.0))
+
+            current_rh = AC_STATE.get("room_humidity")
+            current_rh = float(current_rh) if current_rh is not None else 50.0
+
+            target_t = float(AC_STATE.get("temperature", 25.0))
+
+            hb_payload = {
+                "targetHeatingCoolingState": hk_state,
+                "targetTemperature": target_t,
+                "currentHeatingCoolingState": hk_state,
+                "currentTemperature": round(current_t, 1),
+                "currentRelativeHumidity": round(current_rh, 1)
+            }
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(hb_payload).encode('utf-8'))
+            return
+
+        if path in ('/api/homebridge/targetHeatingCoolingState', '/targetHeatingCoolingState'):
+            val = str(query.get('value', [''])[0]).strip()
+            hub_log(f"[Homebridge] Set HeatingCoolingState: {val}")
+            # 0=Off, 1=Heat, 2=Cool, 3=Auto
+            if val == '0':
+                send_daikin_ir(power='off', reason='Homebridge Mode OFF')
+            elif val == '1':
+                send_daikin_ir(power='on', mode='heat', reason='Homebridge Mode HEAT')
+            elif val == '2':
+                send_daikin_ir(power='on', mode='cool', reason='Homebridge Mode COOL')
+            elif val == '3':
+                send_daikin_ir(power='on', mode='auto', reason='Homebridge Mode AUTO')
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "targetHeatingCoolingState": int(val) if val.isdigit() else 0, "ac_state": AC_STATE}).encode('utf-8'))
+            return
+
+        if path in ('/api/homebridge/targetTemperature', '/targetTemperature'):
+            val = str(query.get('value', [''])[0]).strip()
+            hub_log(f"[Homebridge] Set TargetTemperature: {val}")
+            try:
+                new_temp = int(round(float(val)))
+                send_daikin_ir(temp=new_temp, power='on', reason=f'Homebridge Target Temp {new_temp}C')
+            except Exception as e:
+                hub_log(f"[Homebridge] Error parsing target temp '{val}': {e}")
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "targetTemperature": AC_STATE.get("temperature", 25), "ac_state": AC_STATE}).encode('utf-8'))
+            return
 
         # 1. State API
         if path == '/api/state':
@@ -1952,11 +2022,11 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
 
         # 3. Feedback API (User Teaching AI)
         if path == '/api/feedback':
-            choice = query.get('choice', [''])[0].lower()
+            choice = query.get('choice', [''])[0].strip().lower()
             curr_offset = COMFORT_PROFILE.get("user_offset", 0.0)
             action_desc = ""
 
-            if choice == 'cold':
+            if choice in ('cold', 'too_cold', 'freezing', 'หนาว', 'หนาวไป', 'เย็นไป'):
                 new_offset = round(curr_offset + 0.5, 2)
                 COMFORT_PROFILE["user_offset"] = new_offset
                 curr_t = AC_STATE.get("temperature", 24)
@@ -1969,7 +2039,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                 COMFORT_PROFILE["last_tune_action"] = action_desc
                 save_comfort_profile(COMFORT_PROFILE)
 
-            elif choice == 'warm':
+            elif choice in ('warm', 'too_warm', 'hot', 'ร้อน', 'ร้อนไป'):
                 new_offset = round(curr_offset - 0.5, 2)
                 COMFORT_PROFILE["user_offset"] = new_offset
                 curr_t = AC_STATE.get("temperature", 24)
@@ -1982,7 +2052,7 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                 COMFORT_PROFILE["last_tune_action"] = action_desc
                 save_comfort_profile(COMFORT_PROFILE)
 
-            elif choice == 'comfy':
+            elif choice in ('comfy', 'comfortable', 'สบาย', 'สบายดี'):
                 room_t = AC_STATE.get("room_temp") or 25.0
                 room_rh = AC_STATE.get("room_humidity") or 50.0
                 curr_hx = calculate_humidex(room_t, room_rh) or 26.0

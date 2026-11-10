@@ -20,7 +20,12 @@ Revive and operate abandoned **Ambi Climate 2** hardware units locally without o
 3. **Daikin AC Control (ARC480A46 / Protocol B):**
    - Transmits native 216-bit Daikin IR signals via the Ambi Climate's built-in Global Caché IR transmitter (Port `4998`).
 
-4. **Modern Responsive Web Dashboard:**
+4. **Apple Home & HomeKit Support (via Homebridge):**
+   - Native HomeKit Thermostat endpoints: `/status`, `/targetTemperature`, `/targetHeatingCoolingState`.
+   - Real-time room temperature & humidity reporting.
+   - Siri voice control (English & Thai) and Apple Home app thermostat dial integration.
+
+5. **Modern Responsive Web Dashboard:**
    - Live real-time room metrics & Comfort Index at `http://localhost:9090` (or `http://192.168.1.199:9090`).
    - Interactive AI comfort dials & teaching chips matching official Ambi Climate App manual.
    - LED brightness slider & presets, manual on-demand sensor query, and background auto-polling.
@@ -44,6 +49,34 @@ cd ambiclimate
 sudo docker compose up -d --build
 ```
 Access the dashboard at `http://192.168.1.199:9090`.
+
+---
+
+## 🍏 Apple Home / Homebridge Integration
+
+Connect your local Ambi Climate unit directly to Apple Home via Homebridge:
+
+1. Install **`homebridge-web-thermostat`** plugin from Homebridge UI or via npm:
+   ```bash
+   npm install -g homebridge-web-thermostat
+   ```
+2. Add the accessory configuration into your Homebridge `config.json`:
+   ```json
+   {
+     "accessory": "Thermostat",
+     "name": "Ambi Climate",
+     "apiroute": "http://127.0.0.1:9090",
+     "pollInterval": 30,
+     "currentRelativeHumidity": true,
+     "temperatureDisplayUnits": 0,
+     "minTemp": 18,
+     "maxTemp": 30,
+     "minStep": 1,
+     "validStates": [0, 2]
+   }
+   ```
+   *(Replace `127.0.0.1` with your Ambi Hub host IP if running on a separate machine).*
+3. Restart Homebridge. The thermostat dial, room temperature, and humidity will show up in the Apple Home app automatically.
 
 ---
 
