@@ -42,13 +42,21 @@ python ambi_hub.py
 ```
 Access the dashboard at `http://localhost:9090`.
 
-### Option B: Run on Raspberry Pi / Linux via Docker Compose
+### Option B: Run on Raspberry Pi / Linux via Docker Compose (Recommended)
 ```bash
 git clone https://github.com/Weerawit/ambiclimate.git
 cd ambiclimate
 sudo docker compose up -d --build
 ```
 Access the dashboard at `http://192.168.1.199:9090`.
+
+### Option C: Run directly on Raspberry Pi via Systemd (24/7 Service)
+```bash
+sudo cp ambihub.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ambihub
+```
+Check status: `sudo systemctl status ambihub` or logs with `journalctl -u ambihub -f`.
 
 ---
 

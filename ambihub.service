@@ -1,0 +1,16 @@
+[Unit]
+Description=Ambi Climate 2 Local Hub & Comfort AI Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pi/ambiclimate
+ExecStart=/usr/bin/python3 /home/pi/ambiclimate/ambi_hub.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
