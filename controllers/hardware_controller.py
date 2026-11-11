@@ -509,7 +509,7 @@ def query_live_sensors(target_ip=None):
         "sensor_time": AC_STATE["sensor_time"]
     }
 
-def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
+def send_daikin_ir(temp=None, mode=None, fan=None, power=None, swing=None, reason="Manual"):
     """
     Sends IR signal to Daikin AC via Ambi Climate port 4998 and updates AC_STATE.
     """
@@ -522,6 +522,8 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
         AC_STATE['fan'] = str(fan)
     if power is not None:
         AC_STATE['power'] = str(power)
+    if swing is not None:
+        AC_STATE['swing'] = str(swing)
 
     is_power = str(AC_STATE['power']).lower() != 'off'
     target_ip = get_ambi_ip() or get_cached_ambi_ip()
@@ -541,6 +543,7 @@ def send_daikin_ir(temp=None, mode=None, fan=None, power=None, reason="Manual"):
         temp=AC_STATE['temperature'],
         mode=AC_STATE['mode'],
         fan=AC_STATE['fan'],
+        swing=AC_STATE.get('swing', 'off'),
         power=is_power,
         protocol_type="B"
     )

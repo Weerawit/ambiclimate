@@ -77,7 +77,7 @@ class TestAmbiMVC(unittest.TestCase):
         self.assertIn("ร้อนมาก", c["label"])
 
         # Comfortable range
-        c_comfy = evaluate_comfort(25.0, 50.0)
+        c_comfy = evaluate_comfort(24.0, 45.0, user_offset=0.0)
         self.assertEqual(c_comfy["status_key"], "comfortable")
 
     def test_03_view_dashboard(self):

@@ -180,12 +180,21 @@ class AmbiAPIHandler(BaseHTTPRequestHandler):
                 "targetTemperature": target_t,
                 "currentHeatingCoolingState": hk_state,
                 "currentTemperature": round(current_t, 1),
-                "currentRelativeHumidity": round(current_rh, 1)
+                "currentRelativeHumidity": round(current_rh, 1),
+                "temperatureDisplayUnits": 0
             }
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(hb_payload).encode('utf-8'))
+            return
+
+        if path in ('/api/homebridge/temperatureDisplayUnits', '/temperatureDisplayUnits'):
+            val = str(query.get('value', ['0'])[0]).strip()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "OK", "temperatureDisplayUnits": int(val) if val.isdigit() else 0}).encode('utf-8'))
             return
 
         if path in ('/api/homebridge/targetHeatingCoolingState', '/targetHeatingCoolingState'):
